@@ -19,6 +19,7 @@ services:
       MYSQL_DATABASE: washworld_backend
     volumes:
       - mariadb_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - 3306:3306
 
