@@ -3,7 +3,7 @@
 ## Trin
 
 1. Hent det nyeste commit som sædvanligt.
-2. Opret en ny fil med navnet `**.env**` i samme mappe som `docker-compose.yml` (altså i roden af projektet).
+2. Opret en ny fil med navnet `.env` i samme mappe som `docker-compose.yml` (altså i roden af projektet).
 3. Udfyld filen med variablerne nedenfor (brug eksemplet som udgangspunkt og tilpas værdierne).
 
 ## Variabler som `docker-compose.yml` bruger
