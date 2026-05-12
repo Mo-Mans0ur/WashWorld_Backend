@@ -12,9 +12,10 @@
 | Variabel              | Beskrivelse                                                                                                                                               |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DOCKER_PLATFORM`     | Docker-image platform for MariaDB-containeren. På Apple Silicon er `linux/arm64` typisk passende; brug `linux/amd64` hvis I har brug for AMD64-emulering. |
-| `MYSQL_ROOT_PASSWORD` | Root-adgangskode til MariaDB. Den samme værdi bruges også af phpMyAdmin-servicen til at logge på databasen.                                               |
+| `MYSQL_ROOT_PASSWORD` | Root-adgangskode til MariaDB. Den samme værdi bruges også af phpMyAdmin-servicen til at logge på databasen.
+| `MYSQL_PASSWORD` | Valgfri adgangskode til din bruger.                 |
 | `MYSQL_DATABASE`      | Navnet på den database, MariaDB opretter ved start (sammen med root-adgangskoden).                                                                        |
-| `MYSQL_USERNAME`      | Sendes som miljøvariabel til MariaDB-containeren sammen med de øvrige databaseindstillinger (jf. `docker-compose.yml`).                                   |
+| `MYSQL_USER`      | Sendes som miljøvariabel til MariaDB-containeren sammen med de øvrige databaseindstillinger (jf. `docker-compose.yml`).                                   |
 
 
 ## Eksempel på `.env`-indhold
@@ -23,7 +24,8 @@ Kopier blokken herunder ind i jeres `.env` og ret til efter behov:
 
 ```env
 # DATABASE CONNECTIONS
-MYSQL_USERNAME=yourOwnUsername
+MYSQL_USER=yourOwnUsername
+MYSQL_PASSWORD=yourOwnPassword
 MYSQL_ROOT_PASSWORD=yourOwnPassword
 MYSQL_DATABASE=washworld_backend
 
