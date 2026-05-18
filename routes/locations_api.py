@@ -30,10 +30,10 @@ def list_locations():
         conn, cursor = db()
         cursor.execute(
             """
-            SELECT location_id, location_address, location_zipcode,
+            SELECT location_id, location_name, location_address, location_zipcode,
                    location_coordinate_x, location_coordinate_y, location_open_hours
             FROM locations
-            ORDER BY location_address
+            ORDER BY location_name
             """
         )
         rows = cursor.fetchall()

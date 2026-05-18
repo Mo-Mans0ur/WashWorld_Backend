@@ -5,20 +5,22 @@ from functools import wraps
 
 
 ##############################
+import os
+import mysql.connector
+
 def db():
     try:
-        db = mysql.connector.connect(
+        connection = mysql.connector.connect(
             host="mariadb",
-            user="root",
-            password="password",
-            database="washworld_backend"
+            user=os.environ["MYSQL_USER"],
+            password=os.environ["MYSQL_PASSWORD"],
+            database=os.environ["MYSQL_DATABASE"]
         )
-        cursor = db.cursor(dictionary=True)
-        return db, cursor
+        cursor = connection.cursor(dictionary=True)
+        return connection, cursor
     except Exception as e:
         print(e, flush=True)
         raise Exception("Database under maintenance", 500)
-
 
 ##############################
 

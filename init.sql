@@ -8,6 +8,7 @@ CREATE TABLE `cars` (
 
 CREATE TABLE `locations` (
   `location_id` char(32) PRIMARY KEY NOT NULL,
+  `location_name` varchar(100) NOT NULL,
   `location_address` varchar(255) NOT NULL,
   `location_zipcode` varchar(12) NOT NULL,
   `location_coordinate_x` decimal(9,6) NOT NULL,
