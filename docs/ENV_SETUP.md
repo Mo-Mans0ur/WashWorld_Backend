@@ -16,6 +16,7 @@
 | `MYSQL_PASSWORD` | Valgfri adgangskode til din bruger.                 |
 | `MYSQL_DATABASE`      | Navnet på den database, MariaDB opretter ved start (sammen med root-adgangskoden).                                                                        |
 | `MYSQL_USER`      | Sendes som miljøvariabel til MariaDB-containeren sammen med de øvrige databaseindstillinger (jf. `docker-compose.yml`).                                   |
+| `SECRET_KEY`      | Hemmelig nøgle til login-tokens (Flask). Brug en lang tilfældig streng i produktion.                                                                      |
 
 
 ## Eksempel på `.env`-indhold
@@ -28,6 +29,9 @@ MYSQL_USER=yourOwnUsername
 MYSQL_PASSWORD=yourOwnPassword
 MYSQL_ROOT_PASSWORD=yourOwnPassword
 MYSQL_DATABASE=washworld_backend
+
+# AUTH (Flask login-tokens)
+SECRET_KEY=skift-mig-til-en-lang-tilfaeldig-streng
 
 # PLATFORM
 DOCKER_PLATFORM=linux/amd64
