@@ -1,6 +1,9 @@
-from flask import Blueprint, jsonify, request
+from datetime import datetime
 
-from routes.api_common import apply_cors, error_response, row_to_json
+from flask import Blueprint, jsonify, request
+from werkzeug.security import generate_password_hash
+
+from routes.api_common import apply_cors, error_response, json_body, row_to_json
 from routes.auth_api import _public_user
 from routes.auth_tokens import load_user_id_from_token
 from x import db
@@ -56,6 +59,105 @@ def get_user(user_id):
         else:
             message = "Kunne ikke hente bruger"
         return error_response(message, 503)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@bp.put("/<user_id>")
+def update_user(user_id):
+    token_user_id = _bearer_user_id()
+    if not token_user_id:
+        return error_response("Ikke autoriseret", 401)
+    if token_user_id != user_id:
+        return error_response("Ingen adgang", 403)
+
+    data = json_body()
+    firstname = (data.get("user_firstname") or "").strip()
+    lastname = (data.get("user_lastname") or "").strip()
+    email = (data.get("user_email") or "").strip()
+    phone = (data.get("user_phone") or "").strip()
+    new_password = (data.get("user_password") or "").strip()
+
+    if len(firstname) < 2 or len(firstname) > 50:
+        return error_response("Fornavn skal være 2–50 tegn", 400)
+    if len(lastname) < 2 or len(lastname) > 50:
+        return error_response("Efternavn skal være 2–50 tegn", 400)
+    if not email or "@" not in email:
+        return error_response("Ugyldig email", 400)
+
+    conn, cursor = None, None
+    try:
+        conn, cursor = db()
+
+        if new_password:
+            if len(new_password) < 6:
+                return error_response("Kodeord skal være mindst 6 tegn", 400)
+            password_hash = generate_password_hash(new_password, method="pbkdf2:sha256")
+            cursor.execute(
+                """
+                UPDATE users SET user_firstname=%s, user_lastname=%s, user_email=%s,
+                    user_phone=%s, user_password_hashed=%s, user_updated_at=%s
+                WHERE user_id=%s AND user_deleted_at IS NULL
+                """,
+                (firstname, lastname, email, phone, password_hash, datetime.utcnow(), user_id),
+            )
+        else:
+            cursor.execute(
+                """
+                UPDATE users SET user_firstname=%s, user_lastname=%s, user_email=%s,
+                    user_phone=%s, user_updated_at=%s
+                WHERE user_id=%s AND user_deleted_at IS NULL
+                """,
+                (firstname, lastname, email, phone, datetime.utcnow(), user_id),
+            )
+
+        conn.commit()
+        if cursor.rowcount == 0:
+            return error_response("Bruger ikke fundet", 404)
+
+        user = _fetch_user_by_id(cursor, user_id)
+        return jsonify(_public_user(user))
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return error_response("Kunne ikke opdatere bruger", 503)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@bp.get("/<user_id>/subscriptions")
+def get_user_subscriptions(user_id):
+    token_user_id = _bearer_user_id()
+    if not token_user_id:
+        return error_response("Ikke autoriseret", 401)
+    if token_user_id != user_id:
+        return error_response("Ingen adgang", 403)
+
+    conn, cursor = None, None
+    try:
+        conn, cursor = db()
+        cursor.execute(
+            """
+            SELECT s.subscription_id, s.product_id, s.car_id, s.subscriptions_name,
+                   s.subscriptions_price, s.subscriptions_status, s.subscriptions_start_date,
+                   s.subscriptions_end_date, s.subscriptions_next_billing_date
+            FROM subscriptions s
+            JOIN cars c ON s.car_id = c.car_id
+            WHERE c.user_id = %s
+            ORDER BY s.subscriptions_start_date DESC
+            """,
+            (user_id,),
+        )
+        rows = cursor.fetchall()
+        return jsonify({"subscriptions": [row_to_json(r) for r in rows]})
+    except Exception as e:
+        return error_response("Kunne ikke hente abonnementer", 503)
     finally:
         if cursor:
             cursor.close()
