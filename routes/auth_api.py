@@ -1,6 +1,6 @@
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from flask import Blueprint, jsonify, request, redirect
@@ -12,6 +12,7 @@ from x import REGEX_USER_EMAIL, db, send_verification_email
 
 PASSWORD_MIN = 8
 PASSWORD_MAX = 50
+VERIFICATION_LINK_TTL_MINUTES = 10 # min
 
 bp = Blueprint("auth_api", __name__, url_prefix="/api/auth")
 
@@ -270,23 +271,29 @@ def verify_email(verification_key):
         if user.get("user_deleted_at"):
             return redirect("http://localhost:3000/email-verified?status=deleted")
 
+        if datetime.utcnow() >= user["user_created_at"] + timedelta(minutes=VERIFICATION_LINK_TTL_MINUTES):
+            return redirect("http://localhost:3000/email-verified?status=expired")
+
         if user.get("user_verified_at"):
             return redirect("http://localhost:3000/email-verified?status=already-verified")
 
         
         now = datetime.utcnow()
+        new_verification_key = uuid.uuid4().hex
 
         cursor.execute(
             """
             UPDATE users
             SET
                 user_verified_at = %s,
-                user_updated_at = %s
+                user_updated_at = %s,
+                user_verification_key = %s
             WHERE user_id = %s
             """,
             (
                 now,
                 now,
+                new_verification_key,
                 user["user_id"],
             ),
         )
