@@ -8,10 +8,12 @@ from x import db
 
 bp = Blueprint("cars_api", __name__, url_prefix="/api/users")
 
-
-@bp.after_request
-def _cors(response):
-    return apply_cors(response)
+VALID_VEHICLE_TYPES = {"car", "motorcycle", "truck", "bus"}
+CAR_SELECT = """
+    SELECT car_id, user_id, car_license_plate, car_name, car_is_ev,
+           car_country_code, car_vehicle_type
+    FROM cars
+"""
 
 
 def _authorize(user_id: str):
@@ -21,6 +23,41 @@ def _authorize(user_id: str):
     if token_user_id != user_id:
         return None, error_response("Ingen adgang", 403)
     return token_user_id, None
+
+
+def _parse_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ("1", "true", "yes")
+
+
+def _parse_car_fields(data: dict):
+    plate = str(data.get("car_license_plate", "")).strip()
+    if not plate:
+        return None, error_response("Mangler nummerplade", 400)
+    if len(plate) > 12:
+        return None, error_response("Nummerplade må højst være 12 tegn", 400)
+
+    name = str(data.get("car_name", "")).strip() or None
+    if name and len(name) > 50:
+        return None, error_response("Køretøjsnavn må højst være 50 tegn", 400)
+
+    is_ev = _parse_bool(data.get("car_is_ev", False))
+
+    country_code = str(data.get("car_country_code", "DK")).strip().upper() or "DK"
+    if len(country_code) > 2:
+        return None, error_response("Ugyldig landekode", 400)
+
+    vehicle_type = str(data.get("car_vehicle_type", "car")).strip().lower() or "car"
+    if vehicle_type not in VALID_VEHICLE_TYPES:
+        return None, error_response("Ugyldig køretøjstype", 400)
+
+    return (plate, name, is_ev, country_code, vehicle_type), None
+
+
+@bp.after_request
+def _cors(response):
+    return apply_cors(response)
 
 
 @bp.get("/<user_id>/cars")
@@ -33,9 +70,8 @@ def get_user_cars(user_id):
     try:
         conn, cursor = db()
         cursor.execute(
-            """
-            SELECT car_id, user_id, car_license_plate
-            FROM cars
+            f"""
+            {CAR_SELECT}
             WHERE user_id = %s
             ORDER BY car_license_plate ASC
             """,
@@ -58,12 +94,10 @@ def create_car(user_id):
     if err:
         return err
 
-    data = json_body()
-    plate = str(data.get("car_license_plate", "")).strip()
-    if not plate:
-        return error_response("Mangler nummerplade", 400)
-    if len(plate) > 12:
-        return error_response("Nummerplade må højst være 12 tegn", 400)
+    fields, err = _parse_car_fields(json_body())
+    if err:
+        return err
+    plate, name, is_ev, country_code, vehicle_type = fields
 
     car_id = uuid.uuid4().hex
     conn, cursor = None, None
@@ -71,10 +105,13 @@ def create_car(user_id):
         conn, cursor = db()
         cursor.execute(
             """
-            INSERT INTO cars (car_id, user_id, car_license_plate)
-            VALUES (%s, %s, %s)
+            INSERT INTO cars (
+                car_id, user_id, car_license_plate, car_name, car_is_ev,
+                car_country_code, car_vehicle_type
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
-            (car_id, user_id, plate),
+            (car_id, user_id, plate, name, int(is_ev), country_code, vehicle_type),
         )
         conn.commit()
         return jsonify(
@@ -84,6 +121,10 @@ def create_car(user_id):
                     "car_id": car_id,
                     "user_id": user_id,
                     "car_license_plate": plate,
+                    "car_name": name,
+                    "car_is_ev": is_ev,
+                    "car_country_code": country_code,
+                    "car_vehicle_type": vehicle_type,
                 },
             }
         ), 201
@@ -106,12 +147,10 @@ def update_car(user_id, car_id):
     if err:
         return err
 
-    data = json_body()
-    plate = str(data.get("car_license_plate", "")).strip()
-    if not plate:
-        return error_response("Mangler nummerplade", 400)
-    if len(plate) > 12:
-        return error_response("Nummerplade må højst være 12 tegn", 400)
+    fields, err = _parse_car_fields(json_body())
+    if err:
+        return err
+    plate, name, is_ev, country_code, vehicle_type = fields
 
     conn, cursor = None, None
     try:
@@ -126,10 +165,14 @@ def update_car(user_id, car_id):
         cursor.execute(
             """
             UPDATE cars
-            SET car_license_plate = %s
+            SET car_license_plate = %s,
+                car_name = %s,
+                car_is_ev = %s,
+                car_country_code = %s,
+                car_vehicle_type = %s
             WHERE car_id = %s AND user_id = %s
             """,
-            (plate, car_id, user_id),
+            (plate, name, int(is_ev), country_code, vehicle_type, car_id, user_id),
         )
         conn.commit()
         return jsonify({"message": "Køretøj opdateret"})

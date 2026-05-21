@@ -43,7 +43,11 @@ CREATE TABLE `badge` (
 CREATE TABLE `cars` (
   `car_id` char(32) NOT NULL,
   `user_id` char(32) NOT NULL,
-  `car_license_plate` varchar(12) NOT NULL
+  `car_license_plate` varchar(12) NOT NULL,
+  `car_name` varchar(50) DEFAULT NULL,
+  `car_is_ev` tinyint(1) NOT NULL DEFAULT 0,
+  `car_country_code` varchar(2) NOT NULL DEFAULT 'DK',
+  `car_vehicle_type` varchar(20) NOT NULL DEFAULT 'car'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- --------------------------------------------------------
