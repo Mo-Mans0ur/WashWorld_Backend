@@ -117,6 +117,13 @@ def update_car(user_id, car_id):
     try:
         conn, cursor = db()
         cursor.execute(
+            "SELECT car_id FROM cars WHERE car_id = %s AND user_id = %s LIMIT 1",
+            (car_id, user_id),
+        )
+        if not cursor.fetchone():
+            return error_response("Køretøj ikke fundet", 404)
+
+        cursor.execute(
             """
             UPDATE cars
             SET car_license_plate = %s
@@ -125,8 +132,6 @@ def update_car(user_id, car_id):
             (plate, car_id, user_id),
         )
         conn.commit()
-        if cursor.rowcount == 0:
-            return error_response("Køretøj ikke fundet", 404)
         return jsonify({"message": "Køretøj opdateret"})
     except Exception as e:
         if conn:
