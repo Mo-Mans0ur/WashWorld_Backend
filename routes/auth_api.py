@@ -18,6 +18,7 @@ bp = Blueprint("auth_api", __name__, url_prefix="/api/auth")
 
 @bp.after_request
 def _cors(response):
+    # Adds CORS headers to auth responses.
     return apply_cors(response)
 
 
@@ -25,10 +26,12 @@ def _cors(response):
 @bp.route("/register", methods=["OPTIONS"])
 @bp.route("/verify/<verification_key>", methods=["OPTIONS"])
 def auth_options(verification_key=None):
+    # Handles browser preflight requests for auth routes.
     return apply_cors(jsonify({}))
 
 
 def _public_user(row):
+    # Builds the user object that is safe to send back to the frontend.
     return {
         "user_id": row["user_id"],
         "user_email": row["user_email"],
@@ -43,6 +46,7 @@ def _public_user(row):
 
 
 def _validate_email(email: str) -> Optional[str]:
+    # Checks if the email is valid.
     email = email.strip()
     if not re.match(REGEX_USER_EMAIL, email):
         return None
@@ -50,6 +54,7 @@ def _validate_email(email: str) -> Optional[str]:
 
 
 def _validate_password(password: str) -> Optional[str]:
+    # Checks if the password length is valid.
     password = password.strip()
     if len(password) < PASSWORD_MIN or len(password) > PASSWORD_MAX:
         return None
@@ -57,6 +62,7 @@ def _validate_password(password: str) -> Optional[str]:
 
 
 def _fetch_user_by_email(cursor, email: str):
+    # Finds one user by email.
     cursor.execute(
         """
         SELECT
@@ -81,6 +87,7 @@ def _fetch_user_by_email(cursor, email: str):
 
 
 def _fetch_user_by_verification_key(cursor, verification_key: str):
+    # Finds one user by their email verification key.
     cursor.execute(
         """
         SELECT
@@ -106,6 +113,7 @@ def _fetch_user_by_verification_key(cursor, verification_key: str):
 
 @bp.post("/login")
 def login():
+    # Logs in a verified user and returns an access token.
     data = json_body()
     email = _validate_email(data.get("user_email", ""))
     password = _validate_password(data.get("user_password", ""))
@@ -153,6 +161,7 @@ def login():
 
 @bp.post("/register")
 def register():
+    # Creates a new user and sends a verification email.
     data = json_body()
     email = _validate_email(data.get("user_email", ""))
     password = _validate_password(data.get("user_password", ""))
@@ -242,6 +251,7 @@ def register():
 
 @bp.get("/verify/<verification_key>")
 def verify_email(verification_key):
+    # Verifies a user account from the email link.
     conn, cursor = None, None
 
     try:
