@@ -16,6 +16,11 @@ def _cors(response):
     return apply_cors(response)
 
 
+@bp.route("/wash_log", methods=["OPTIONS"])
+def wash_log_options():
+    return apply_cors(jsonify({}))
+
+
 @bp.get("/wash_log")
 def get_wash_log():
     conn, cursor = None, None
@@ -39,6 +44,7 @@ def get_wash_log():
 
                 products.product_id,
                 products.product_name,
+                COALESCE(wash_log.wash_log_price, products.product_price) AS product_price,
 
                 locations.location_id,
                 locations.location_name,
@@ -89,6 +95,8 @@ def create_wash_log():
         car_id = str(data.get("car_id", "")).strip()
         product_id = str(data.get("product_id", "")).strip()
         location_id = str(data.get("location_id", "")).strip()
+        wash_log_price_raw = data.get("wash_log_price")
+        wash_log_price = float(wash_log_price_raw) if wash_log_price_raw is not None else None
 
         if not car_id:
             return jsonify({"error": "Missing car id"}), 400
@@ -105,9 +113,10 @@ def create_wash_log():
                 car_id,
                 product_id,
                 location_id,
-                wash_log_start_time
+                wash_log_start_time,
+                wash_log_price
             )
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
             (
                 wash_log_id,
@@ -115,6 +124,7 @@ def create_wash_log():
                 product_id if product_id else None,
                 location_id if location_id else None,
                 wash_log_start_time,
+                wash_log_price,
             ),
         )
 

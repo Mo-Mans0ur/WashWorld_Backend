@@ -7,6 +7,7 @@ from routes.locations_api import bp as locations_api_bp
 from routes.users_api import bp as users_api_bp
 from routes.subscriptions_api import bp as subscriptions_api_bp
 from routes.cars_api import bp as cars_api_bp
+from routes.wash_log_api import bp as wash_log_api_bp
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get(
@@ -19,6 +20,7 @@ app.register_blueprint(auth_api_bp)
 app.register_blueprint(users_api_bp)
 app.register_blueprint(subscriptions_api_bp)
 app.register_blueprint(cars_api_bp)
+app.register_blueprint(wash_log_api_bp)
 
 
 @app.route('/')

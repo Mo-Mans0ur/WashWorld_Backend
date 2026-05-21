@@ -865,6 +865,17 @@ CREATE TABLE `products` (
   `product_category` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
+--
+-- Data for table `products`
+--
+
+INSERT INTO `products` (`product_id`, `product_name`, `product_price`, `product_category`) VALUES
+('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4', 'Guld', 59.00, 'enkelt_vask'),
+('b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5', 'Premium', 89.00, 'enkelt_vask'),
+('c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6', 'Brilliant', 119.00, 'enkelt_vask'),
+('d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1', 'Vask Selv', 6.00, 'vask_selv'),
+('e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2', 'Stoevsuger', 6.00, 'stoevsuger');
+
 -- --------------------------------------------------------
 
 --
@@ -968,7 +979,8 @@ CREATE TABLE `wash_log` (
   `car_id` char(32) DEFAULT NULL,
   `product_id` char(32) DEFAULT NULL,
   `location_id` char(32) DEFAULT NULL,
-  `wash_log_start_time` datetime NOT NULL
+  `wash_log_start_time` datetime NOT NULL,
+  `wash_log_price` decimal(10,2) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 --
