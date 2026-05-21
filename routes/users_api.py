@@ -131,6 +131,36 @@ def update_user(user_id):
             conn.close()
 
 
+@bp.delete("/<user_id>")
+def delete_user(user_id):
+    token_user_id = _bearer_user_id()
+    if not token_user_id:
+        return error_response("Ikke autoriseret", 401)
+    if token_user_id != user_id:
+        return error_response("Ingen adgang", 403)
+
+    conn, cursor = None, None
+    try:
+        conn, cursor = db()
+        cursor.execute(
+            "UPDATE users SET user_deleted_at=%s WHERE user_id=%s AND user_deleted_at IS NULL",
+            (datetime.utcnow(), user_id),
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            return error_response("Bruger ikke fundet", 404)
+        return jsonify({"message": "Bruger slettet"})
+    except Exception:
+        if conn:
+            conn.rollback()
+        return error_response("Kunne ikke slette bruger", 503)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
 @bp.get("/<user_id>/subscriptions")
 def get_user_subscriptions(user_id):
     token_user_id = _bearer_user_id()
