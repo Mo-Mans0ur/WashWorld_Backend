@@ -3,14 +3,14 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, redirect
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from routes.api_common import apply_cors, error_response, json_body, row_to_json
 from routes.auth_tokens import create_access_token
-from x import REGEX_USER_EMAIL, db
+from x import REGEX_USER_EMAIL, db, send_verification_email
 
-PASSWORD_MIN = 6
+PASSWORD_MIN = 8
 PASSWORD_MAX = 50
 
 bp = Blueprint("auth_api", __name__, url_prefix="/api/auth")
@@ -23,7 +23,8 @@ def _cors(response):
 
 @bp.route("/login", methods=["OPTIONS"])
 @bp.route("/register", methods=["OPTIONS"])
-def auth_options():
+@bp.route("/verify/<verification_key>", methods=["OPTIONS"])
+def auth_options(verification_key=None):
     return apply_cors(jsonify({}))
 
 
@@ -37,7 +38,7 @@ def _public_user(row):
         "user_created_at": row_to_json(row)["user_created_at"],
         "user_updated_at": row_to_json(row)["user_updated_at"],
         "user_deleted_at": row_to_json(row).get("user_deleted_at"),
-        "user_verified_at": row_to_json(row)["user_verified_at"],
+        "user_verified_at": row_to_json(row).get("user_verified_at"),
     }
 
 
@@ -58,14 +59,47 @@ def _validate_password(password: str) -> Optional[str]:
 def _fetch_user_by_email(cursor, email: str):
     cursor.execute(
         """
-        SELECT user_id, user_email, user_password_hashed, user_firstname,
-               user_lastname, user_phone, user_created_at, user_updated_at,
-               user_deleted_at, user_verified_at
+        SELECT
+            user_id,
+            user_email,
+            user_password_hashed,
+            user_firstname,
+            user_lastname,
+            user_phone,
+            user_created_at,
+            user_updated_at,
+            user_deleted_at,
+            user_verification_key,
+            user_verified_at
         FROM users
         WHERE user_email = %s
         LIMIT 1
         """,
         (email,),
+    )
+    return cursor.fetchone()
+
+
+def _fetch_user_by_verification_key(cursor, verification_key: str):
+    cursor.execute(
+        """
+        SELECT
+            user_id,
+            user_email,
+            user_password_hashed,
+            user_firstname,
+            user_lastname,
+            user_phone,
+            user_created_at,
+            user_updated_at,
+            user_deleted_at,
+            user_verification_key,
+            user_verified_at
+        FROM users
+        WHERE user_verification_key = %s
+        LIMIT 1
+        """,
+        (verification_key,),
     )
     return cursor.fetchone()
 
@@ -80,6 +114,7 @@ def login():
         return error_response("Ugyldig email eller kodeord", 400)
 
     conn, cursor = None, None
+
     try:
         conn, cursor = db()
         user = _fetch_user_by_email(cursor, email)
@@ -90,17 +125,28 @@ def login():
         if not check_password_hash(user["user_password_hashed"], password):
             return error_response("Ugyldigt brugernavn eller kodeord", 401)
 
+        if not user.get("user_verified_at"):
+            return error_response("Du skal bekræfte din email før du kan logge ind", 403)
+
         token = create_access_token(user["user_id"])
-        return jsonify({"token": token, "user": _public_user(user)})
+
+        return jsonify({
+            "token": token,
+            "user": _public_user(user),
+        })
+
     except Exception as e:
         if hasattr(e, "args") and len(e.args) > 1 and e.args[1] == 500:
             message = str(e.args[0])
         else:
             message = "Kunne ikke logge ind"
+
         return error_response(message, 503)
+
     finally:
         if cursor:
             cursor.close()
+
         if conn:
             conn.close()
 
@@ -139,13 +185,13 @@ def register():
 
         cursor.execute(
             """
-            INSERT INTO users (
-                user_id, user_email, user_password_hashed,
-                user_firstname, user_lastname, user_phone,
-                user_created_at, user_updated_at, user_deleted_at,
-                user_verification_key, user_verified_at, user_reset_password
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL, %s, %s, NULL)
-            """,
+    INSERT INTO users (
+        user_id, user_email, user_password_hashed,
+        user_firstname, user_lastname, user_phone,
+        user_created_at, user_updated_at, user_deleted_at,
+        user_verification_key, user_verified_at, user_reset_password
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL, %s, NULL, NULL)
+    """,
             (
                 user_id,
                 email,
@@ -156,34 +202,100 @@ def register():
                 now,
                 now,
                 verification_key,
-                now,
             ),
         )
         conn.commit()
 
-        user = {
+
+        try:
+            send_verification_email(email, firstname, verification_key)
+        except Exception as email_error:
+            print(email_error, flush=True)
+            return jsonify({
+                "message": "Bruger oprettet, men verification email kunne ikke sendes",
+                "user_id": user_id,
+            }), 201
+
+        return jsonify({
+            "message": "Bruger oprettet. Tjek din email for at bekræfte kontoen.",
             "user_id": user_id,
-            "user_email": email,
-            "user_firstname": firstname,
-            "user_lastname": lastname,
-            "user_phone": phone,
-            "user_created_at": now,
-            "user_updated_at": now,
-            "user_deleted_at": None,
-            "user_verified_at": now,
-        }
-        token = create_access_token(user_id)
-        return jsonify({"token": token, "user": _public_user(user)}), 201
+        }), 201
+
     except Exception as e:
         if conn:
             conn.rollback()
+
         if hasattr(e, "args") and len(e.args) > 1 and e.args[1] == 500:
             message = str(e.args[0])
         else:
             message = "Kunne ikke oprette bruger"
+
         return error_response(message, 503)
+
     finally:
         if cursor:
             cursor.close()
+
+        if conn:
+            conn.close()
+
+
+@bp.get("/verify/<verification_key>")
+def verify_email(verification_key):
+    conn, cursor = None, None
+
+    try:
+        verification_key = str(verification_key or "").strip()
+
+        if not verification_key:
+            return error_response("Missing verification key", 400)
+
+        conn, cursor = db()
+
+        user = _fetch_user_by_verification_key(cursor, verification_key)
+
+        if not user:
+            return redirect("http://localhost:3000/email-verified?status=invalid")
+
+        if user.get("user_deleted_at"):
+            return redirect("http://localhost:3000/email-verified?status=deleted")
+
+        if user.get("user_verified_at"):
+            return redirect("http://localhost:3000/email-verified?status=already-verified")
+
+        
+        now = datetime.utcnow()
+
+        cursor.execute(
+            """
+            UPDATE users
+            SET
+                user_verified_at = %s,
+                user_updated_at = %s
+            WHERE user_id = %s
+            """,
+            (
+                now,
+                now,
+                user["user_id"],
+            ),
+        )
+
+        conn.commit()
+
+        return redirect("http://localhost:3000/email-verified?status=success")
+
+    except Exception as e:
+        print(e, flush=True)
+
+        if conn:
+            conn.rollback()
+
+        return error_response("Could not verify email", 503)
+
+    finally:
+        if cursor:
+            cursor.close()
+
         if conn:
             conn.close()

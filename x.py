@@ -1,8 +1,16 @@
-from flask import request, make_response
+from time import time
+
+from flask import request, make_response, Blueprint
+import smtplib
 import mysql.connector
+import uuid
 import re  # Regular expressions
 from functools import wraps
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
+
+bp = Blueprint("x", __name__)
 
 ##############################
 import os
@@ -164,3 +172,130 @@ def validate_search_query():
     if not re.match(REGEX_SEARCH_QUERY, search_query):
         raise Exception("company_exception search_query")
     return search_query
+
+
+
+###############################
+########## E-Mail #############
+###############################
+
+
+
+def send_verification_email(receiver_email, firstname, verification_key):
+    try:    
+        # Create a gmail 
+        # Enable (turn on) 2 step verification/factor in the google account manager
+        # Visit: https://myaccount.google.com/apppasswords
+        # Copy the key :
+ 
+        # Email and password of the sender's Gmail account
+        sender_email = "washworldtest2026@gmail.com"
+        password = "cfbx erul ezpe ksuj"  # If 2FA is on, use an App Password instead
+
+        verification_link = f"http://127.0.0.1:80/api/auth/verify/{verification_key}"
+ 
+        # Receiver email address
+        receiver_email = receiver_email
+        
+        # Create the email message
+        message = MIMEMultipart()
+        message["From"] = "Washworld <washworldtest2026@gmail.com>"
+        message["To"] = receiver_email
+        message["Subject"] = "Please verify your account"
+ 
+        # Body of the email
+        body = f"""<div style="font-family: Gilroy, Arial, sans-serif; line-height: 1.5; color: #333; padding: 20px; background-color: #f9f9f9; border-radius: 10px; max-width: 600px; margin: auto;">
+                <h1>Welcome to WashWorld</h1>
+                    <h1>Hi {firstname}</h1>
+                    
+                    <p>We're excited to have you on board. Please verify your account to get started.</p>
+
+                    <p>You can verify your account by clicking the link below:</p>
+                    <h2>
+                        <a href="{verification_link}" 
+                            style="
+                            display: inline-block; 
+                            background-color: #06C167; 
+                            color: white; 
+                            padding: 10px 8px; 
+                            text-decoration: none; 
+                            font-weight: bold;
+                        
+                        
+                            ">
+                            Verify Account
+                        </a>
+                        
+                    </h2>
+
+                    <p>If the button above does not work, please copy and paste the following link into your browser:</p>
+                    <p><a href="{verification_link}">{verification_link}</a></p>
+                   </div>"""
+        message.attach(MIMEText(body, "html"))
+ 
+        # Connect to Gmail's SMTP server and send the email
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()  # Upgrade the connection to secure
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, message.as_string())
+        print("Verification email sent successfully!", flush=True)
+ 
+        return "email sent"
+       
+    except Exception as ex:
+        print(ex, flush=True)
+        raise Exception("Failed to send verification email", 500)
+
+###############################
+
+REGEX_RESET_PASSWORD_KEY = r"^[a-f0-9]{64}:[0-9]{10}$"
+RESET_PASSWORD_TTL_SECONDS = 60 # 1 minute
+
+def validate_reset_password_key(reset_key):
+    reset_key = str(reset_key).strip()
+    if not re.match(REGEX_RESET_PASSWORD_KEY, reset_key):
+        raise Exception("company_exception reset_password_key invalid")
+    return reset_key
+
+
+def make_reset_password_key():
+    random_key = uuid.uuid4().hex + uuid.uuid4().hex
+    expires_at = int(time()) + RESET_PASSWORD_TTL_SECONDS
+    return f"{random_key}:{expires_at}"
+
+
+def parse_reset_password_key(reset_key):
+    reset_key = validate_reset_password_key(reset_key)
+
+    random_key, expires_at = reset_key.split(":")
+    expires_at = int(expires_at)
+
+    return random_key, expires_at
+
+
+def is_reset_password_key_expired(reset_key):
+    reset_key_parts = parse_reset_password_key(reset_key)
+    expires_at = reset_key_parts[1]
+    return int(time()) > expires_at
+
+###########################
+REGEX_EMAIL = "^(?:@a|@b|[^@\\s]+@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,})$"
+
+
+def validate_email(email):
+    email = email.strip()
+    if not re.match(REGEX_EMAIL, email):
+        raise Exception("company_exception email")
+    return email
+
+############################
+USER_PASSWORD_MIN = 8
+USER_PASSWORD_MAX = 50
+REGEX_USER_PASSWORD = f"^.{{{USER_PASSWORD_MIN},{USER_PASSWORD_MAX}}}$"
+
+
+def validate_user_password(password):
+    user_password = password.strip()
+    if not re.match(REGEX_USER_PASSWORD, user_password):
+        raise Exception("company_exception user_password")
+    return user_password
