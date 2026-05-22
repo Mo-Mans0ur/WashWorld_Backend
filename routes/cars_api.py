@@ -11,7 +11,7 @@ bp = Blueprint("cars_api", __name__, url_prefix="/api/users")
 VALID_VEHICLE_TYPES = {"car", "motorcycle", "truck", "bus"}
 CAR_SELECT = """
     SELECT car_id, user_id, car_license_plate, car_name, car_is_ev,
-           car_country_code, car_vehicle_type
+           car_country_code, car_vehicle_type, car_is_active
     FROM cars
 """
 
@@ -72,7 +72,7 @@ def get_user_cars(user_id):
         cursor.execute(
             f"""
             {CAR_SELECT}
-            WHERE user_id = %s
+            WHERE user_id = %s AND car_is_active = 1
             ORDER BY car_license_plate ASC
             """,
             (user_id,),
@@ -199,12 +199,16 @@ def delete_car(user_id, car_id):
     try:
         conn, cursor = db()
         cursor.execute(
-            "DELETE FROM cars WHERE car_id = %s AND user_id = %s",
+            "SELECT car_id FROM cars WHERE car_id = %s AND user_id = %s",
+            (car_id, user_id),
+        )
+        if not cursor.fetchone():
+            return error_response("Køretøj ikke fundet", 404)
+        cursor.execute(
+            "UPDATE cars SET car_is_active = 0 WHERE car_id = %s AND user_id = %s",
             (car_id, user_id),
         )
         conn.commit()
-        if cursor.rowcount == 0:
-            return error_response("Køretøj ikke fundet", 404)
         return jsonify({"message": "Køretøj slettet"})
     except Exception:
         if conn:

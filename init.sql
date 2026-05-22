@@ -47,7 +47,8 @@ CREATE TABLE `cars` (
   `car_name` varchar(50) DEFAULT NULL,
   `car_is_ev` tinyint(1) NOT NULL DEFAULT 0,
   `car_country_code` varchar(2) NOT NULL DEFAULT 'DK',
-  `car_vehicle_type` varchar(20) NOT NULL DEFAULT 'car'
+  `car_vehicle_type` varchar(20) NOT NULL DEFAULT 'car',
+  `car_is_active` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- --------------------------------------------------------
