@@ -911,7 +911,7 @@ CREATE TABLE `users` (
   `user_updated_at` datetime NOT NULL,
   `user_deleted_at` datetime DEFAULT NULL,
   `user_verification_key` char(32) NOT NULL,
-  `user_verified_at` datetime NOT NULL,
+  `user_verified_at` datetime DEFAULT NULL,
   `user_reset_password` char(75) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 

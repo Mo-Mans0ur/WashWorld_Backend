@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from flask import Blueprint, jsonify, request
@@ -188,6 +189,100 @@ def get_user_subscriptions(user_id):
         return jsonify({"subscriptions": [row_to_json(r) for r in rows]})
     except Exception as e:
         return error_response("Kunne ikke hente abonnementer", 503)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@bp.get("/<user_id>/favorites")
+def get_favorites(user_id):
+    token_user_id = _bearer_user_id()
+    if not token_user_id:
+        return error_response("Ikke autoriseret", 401)
+    if token_user_id != user_id:
+        return error_response("Ingen adgang", 403)
+
+    conn, cursor = None, None
+    try:
+        conn, cursor = db()
+        cursor.execute(
+            "SELECT location_fk FROM favorites WHERE user_fk = %s",
+            (user_id,),
+        )
+        rows = cursor.fetchall()
+        return jsonify({"favorites": [r["location_fk"] for r in rows]})
+    except Exception:
+        return error_response("Kunne ikke hente favoritter", 503)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@bp.post("/<user_id>/favorites")
+def add_favorite(user_id):
+    token_user_id = _bearer_user_id()
+    if not token_user_id:
+        return error_response("Ikke autoriseret", 401)
+    if token_user_id != user_id:
+        return error_response("Ingen adgang", 403)
+
+    data = json_body()
+    location_id = (data.get("location_id") or "").strip()
+    if not location_id:
+        return error_response("location_id mangler", 400)
+
+    conn, cursor = None, None
+    try:
+        conn, cursor = db()
+        cursor.execute(
+            "SELECT favorites_id FROM favorites WHERE user_fk = %s AND location_fk = %s",
+            (user_id, location_id),
+        )
+        if cursor.fetchone():
+            return jsonify({"message": "Allerede favorit"}), 200
+
+        cursor.execute(
+            "INSERT INTO favorites (favorites_id, user_fk, location_fk) VALUES (%s, %s, %s)",
+            (uuid.uuid4().hex, user_id, location_id),
+        )
+        conn.commit()
+        return jsonify({"message": "Favorit tilføjet"}), 201
+    except Exception:
+        if conn:
+            conn.rollback()
+        return error_response("Kunne ikke tilføje favorit", 503)
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@bp.delete("/<user_id>/favorites/<location_id>")
+def remove_favorite(user_id, location_id):
+    token_user_id = _bearer_user_id()
+    if not token_user_id:
+        return error_response("Ikke autoriseret", 401)
+    if token_user_id != user_id:
+        return error_response("Ingen adgang", 403)
+
+    conn, cursor = None, None
+    try:
+        conn, cursor = db()
+        cursor.execute(
+            "DELETE FROM favorites WHERE user_fk = %s AND location_fk = %s",
+            (user_id, location_id),
+        )
+        conn.commit()
+        return jsonify({"message": "Favorit fjernet"})
+    except Exception:
+        if conn:
+            conn.rollback()
+        return error_response("Kunne ikke fjerne favorit", 503)
     finally:
         if cursor:
             cursor.close()
