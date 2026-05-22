@@ -263,7 +263,7 @@ def send_verification_email(receiver_email, firstname, verification_key):
 ###############################
 
 REGEX_RESET_PASSWORD_KEY = r"^[a-f0-9]{64}:[0-9]{10}$"
-RESET_PASSWORD_TTL_SECONDS = 60 # 1 minute
+RESET_PASSWORD_TTL_SECONDS = 900 # 15 minutes
 
 def validate_reset_password_key(reset_key):
     # Checks if the reset password key has the correct format.
@@ -306,6 +306,59 @@ def validate_email(email):
     if not re.match(REGEX_EMAIL, email):
         raise Exception("company_exception email")
     return email
+
+def send_reset_password_email(receiver_email, firstname, reset_key):
+    # Sends an email with a link the user can click to reset their password.
+    try:
+        sender_email = "washworldtest2026@gmail.com"
+        password = "cfbx erul ezpe ksuj"
+
+        reset_link = f"http://localhost:3000/reset-password/confirm?key={reset_key}"
+
+        message = MIMEMultipart()
+        message["From"] = "Washworld <washworldtest2026@gmail.com>"
+        message["To"] = receiver_email
+        message["Subject"] = "Nulstil din adgangskode"
+
+        body = f"""<div style="font-family: Gilroy, Arial, sans-serif; line-height: 1.5; color: #333; padding: 20px; background-color: #f9f9f9; border-radius: 10px; max-width: 600px; margin: auto;">
+                <h1>WashWorld</h1>
+                <h1>Hej {firstname}</h1>
+
+                <p>Vi har modtaget en anmodning om at nulstille adgangskoden til din WashWorld-konto.</p>
+                <p>Klik på knappen nedenfor for at vælge en ny adgangskode. Linket udløber om 15 minutter.</p>
+
+                <h2>
+                    <a href="{reset_link}"
+                        style="
+                        display: inline-block;
+                        background-color: #06C167;
+                        color: white;
+                        padding: 10px 8px;
+                        text-decoration: none;
+                        font-weight: bold;
+                        ">
+                        Nulstil adgangskode
+                    </a>
+                </h2>
+
+                <p>Hvis knappen ikke virker, kopiér og indsæt dette link i din browser:</p>
+                <p><a href="{reset_link}">{reset_link}</a></p>
+
+                <p>Hvis du ikke har anmodet om at nulstille din adgangskode, kan du se bort fra denne email.</p>
+               </div>"""
+        message.attach(MIMEText(body, "html"))
+
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, message.as_string())
+        print("Reset password email sent successfully!", flush=True)
+
+        return "email sent"
+
+    except Exception as ex:
+        print(ex, flush=True)
+        raise Exception("Failed to send reset password email", 500)
 
 ############################
 USER_PASSWORD_MIN = 8

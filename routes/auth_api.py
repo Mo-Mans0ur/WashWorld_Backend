@@ -8,7 +8,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from routes.api_common import apply_cors, error_response, json_body, row_to_json
 from routes.auth_tokens import create_access_token
-from x import REGEX_USER_EMAIL, db, send_verification_email
+from x import (
+    REGEX_USER_EMAIL,
+    db,
+    send_verification_email,
+    make_reset_password_key,
+    is_reset_password_key_expired,
+    send_reset_password_email,
+)
 
 PASSWORD_MIN = 8
 PASSWORD_MAX = 50
@@ -26,6 +33,8 @@ def _cors(response):
 @bp.route("/login", methods=["OPTIONS"])
 @bp.route("/register", methods=["OPTIONS"])
 @bp.route("/verify/<verification_key>", methods=["OPTIONS"])
+@bp.route("/forgot-password", methods=["OPTIONS"])
+@bp.route("/reset-password", methods=["OPTIONS"])
 def auth_options(verification_key=None):
     # Handles browser preflight requests for auth routes.
     return apply_cors(jsonify({}))
@@ -314,5 +323,107 @@ def verify_email(verification_key):
         if cursor:
             cursor.close()
 
+        if conn:
+            conn.close()
+
+
+@bp.post("/forgot-password")
+def forgot_password():
+    # Generates a reset key and sends a password-reset email if the account exists.
+    data = json_body()
+    email = _validate_email(data.get("user_email", ""))
+
+    if not email:
+        return error_response("Ugyldig email", 400)
+
+    conn, cursor = None, None
+    try:
+        conn, cursor = db()
+        user = _fetch_user_by_email(cursor, email)
+
+        # Always return 200 so we don't reveal whether the email exists.
+        if not user or user.get("user_deleted_at"):
+            return jsonify({"message": "Hvis emailen findes, modtager du snart et link."})
+
+        reset_key = make_reset_password_key()
+        now = datetime.utcnow()
+
+        cursor.execute(
+            "UPDATE users SET user_reset_password = %s, user_updated_at = %s WHERE user_id = %s",
+            (reset_key, now, user["user_id"]),
+        )
+        conn.commit()
+
+        try:
+            send_reset_password_email(email, user["user_firstname"], reset_key)
+        except Exception as email_error:
+            print(email_error, flush=True)
+
+        return jsonify({"message": "Hvis emailen findes, modtager du snart et link."})
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return error_response("Noget gik galt, prøv igen", 503)
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@bp.post("/reset-password")
+def reset_password():
+    # Validates the reset key and updates the user's password.
+    data = json_body()
+    reset_key = str(data.get("reset_key") or "").strip()
+    password = _validate_password(data.get("user_password", ""))
+
+    if not reset_key or not password:
+        return error_response("Ugyldig anmodning", 400)
+
+    try:
+        if is_reset_password_key_expired(reset_key):
+            return error_response("Linket er udløbet. Anmod om et nyt.", 400)
+    except Exception:
+        return error_response("Ugyldigt reset-link", 400)
+
+    conn, cursor = None, None
+    try:
+        conn, cursor = db()
+
+        cursor.execute(
+            "SELECT user_id FROM users WHERE user_reset_password = %s AND user_deleted_at IS NULL LIMIT 1",
+            (reset_key,),
+        )
+        user = cursor.fetchone()
+
+        if not user:
+            return error_response("Ugyldigt eller allerede brugt link", 400)
+
+        password_hash = generate_password_hash(password, method="pbkdf2:sha256")
+        now = datetime.utcnow()
+
+        cursor.execute(
+            """
+            UPDATE users
+            SET user_password_hashed = %s, user_reset_password = NULL, user_updated_at = %s
+            WHERE user_id = %s
+            """,
+            (password_hash, now, user["user_id"]),
+        )
+        conn.commit()
+
+        return jsonify({"message": "Adgangskode nulstillet. Du kan nu logge ind."})
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return error_response("Noget gik galt, prøv igen", 503)
+
+    finally:
+        if cursor:
+            cursor.close()
         if conn:
             conn.close()
