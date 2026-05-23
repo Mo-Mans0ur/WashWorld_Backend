@@ -850,7 +850,8 @@ CREATE TABLE `offers` (
   `offer_description` varchar(255) NOT NULL,
   `offer_discount_percentage` decimal(5,2) NOT NULL,
   `offer_start_date` datetime NOT NULL,
-  `offer_end_date` datetime NOT NULL
+  `offer_end_date` datetime NOT NULL,
+  `offer_photo_base64` longtext DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- --------------------------------------------------------
