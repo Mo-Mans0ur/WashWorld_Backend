@@ -107,9 +107,9 @@ def create_car(user_id):
             """
             INSERT INTO cars (
                 car_id, user_id, car_license_plate, car_name, car_is_ev,
-                car_country_code, car_vehicle_type
+                car_country_code, car_vehicle_type, car_is_active
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 1)
             """,
             (car_id, user_id, plate, name, int(is_ev), country_code, vehicle_type),
         )

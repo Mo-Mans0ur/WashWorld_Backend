@@ -177,7 +177,8 @@ def get_user_subscriptions(user_id):
             """
             SELECT s.subscription_id, s.product_id, s.car_id, s.subscriptions_name,
                    s.subscriptions_price, s.subscriptions_status, s.subscriptions_start_date,
-                   s.subscriptions_end_date, s.subscriptions_next_billing_date
+                   s.subscriptions_end_date, s.subscriptions_next_billing_date,
+                   c.car_name, c.car_license_plate
             FROM subscriptions s
             JOIN cars c ON s.car_id = c.car_id
             WHERE c.user_id = %s
