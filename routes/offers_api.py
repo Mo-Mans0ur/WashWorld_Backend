@@ -22,8 +22,8 @@ def list_offers():
             SELECT offer_id, product_id, offer_description, offer_discount_percentage,
                    offer_start_date, offer_end_date, offer_photo_base64
             FROM offers
-            WHERE offer_start_date <= NOW()
-              AND offer_end_date >= NOW()
+            WHERE CURDATE() >= DATE(offer_start_date)
+              AND CURDATE() <= DATE(offer_end_date)
             ORDER BY offer_start_date DESC
             """
         )
