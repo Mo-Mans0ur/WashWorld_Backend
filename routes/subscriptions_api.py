@@ -15,11 +15,6 @@ def _cors(response):
     return apply_cors(response)
 
 
-@bp.route("/subscriptions", methods=["OPTIONS"])
-@bp.route("/subscriptions/<subscription_id>", methods=["OPTIONS"])
-def subscriptions_options(subscription_id=None):
-    return apply_cors(jsonify({}))
-
 
 @bp.get("/subscriptions")
 def get_subscriptions():

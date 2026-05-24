@@ -30,15 +30,6 @@ def _cors(response):
     return apply_cors(response)
 
 
-@bp.route("/login", methods=["OPTIONS"])
-@bp.route("/register", methods=["OPTIONS"])
-@bp.route("/verify/<verification_key>", methods=["OPTIONS"])
-@bp.route("/forgot-password", methods=["OPTIONS"])
-@bp.route("/reset-password", methods=["OPTIONS"])
-def auth_options(verification_key=None):
-    # Handles browser preflight requests for auth routes.
-    return apply_cors(jsonify({}))
-
 
 def _public_user(row):
     # Builds the user object that is safe to send back to the frontend.

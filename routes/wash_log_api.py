@@ -16,10 +16,6 @@ def _cors(response):
     return apply_cors(response)
 
 
-@bp.route("/wash_log", methods=["OPTIONS"])
-def wash_log_options():
-    return apply_cors(jsonify({}))
-
 
 @bp.get("/wash_log")
 def get_wash_log():
