@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify
 
 from routes.api_common import apply_cors, error_response, json_body, row_to_json
 from routes.users_api import _bearer_user_id
-from x import db, validate_car_number_plate
+from x import db, validate_car_number_plate, InvalidCarPlateError
 
 bp = Blueprint("cars_api", __name__, url_prefix="/api/users")
 
@@ -32,10 +32,10 @@ def _parse_bool(value) -> bool:
 
 
 def _parse_car_fields(data: dict):
-    plate = validate_car_number_plate(data.get("car_license_plate", ""))
-    
-    if not plate:
-        return None, error_response("Mangler nummerplade", 400)
+    try:
+        plate = validate_car_number_plate(data.get("car_license_plate", ""))
+    except InvalidCarPlateError as e:
+        return None, error_response(str(e), 400)
     if len(plate) > 12:
         return None, error_response("Nummerplade må højst være 12 tegn", 400)
 

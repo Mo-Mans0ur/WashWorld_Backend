@@ -120,14 +120,15 @@ def validate_user_password():
 ###############################
 CAR_NUMBER_PLATE_REGEX = r"^[A-Z0-9][A-Z0-9 \-]{0,10}[A-Z0-9]$"
 
+class InvalidCarPlateError(ValueError):
+    pass
+
 def validate_car_number_plate(plate):
-    # Checks if the car number plate matches the expected format.
-    # Returns None for empty/invalid plates so callers can return a 400 response.
+    # Kaster InvalidCarPlateError (ikke plain Exception) så kaldere kan fange den
+    # uden utilsigtet at sluge uvedkommende fejl (f.eks. DB-fejl).
     car_number_plate = str(plate or "").strip().upper()
-    if not car_number_plate:
-        return None
-    if not re.match(CAR_NUMBER_PLATE_REGEX, car_number_plate):
-        return None
+    if not car_number_plate or not re.match(CAR_NUMBER_PLATE_REGEX, car_number_plate):
+        raise InvalidCarPlateError("Mangler nummerplade")
     return car_number_plate
 
 
