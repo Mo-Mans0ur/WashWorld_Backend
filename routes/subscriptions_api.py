@@ -25,7 +25,7 @@ def get_subscriptions():
 
         cursor.execute(
             """
-            SELECT subscription_id, product_id, car_id, subscriptions_name,
+            SELECT subscription_id, product_id, car_id, location_id, subscriptions_name,
                    subscriptions_price, subscriptions_status, subscriptions_start_date,
                    subscriptions_end_date, subscriptions_next_billing_date
             FROM subscriptions
@@ -56,6 +56,7 @@ def create_subscription():
         # product_id og car_id er nullable i DB — sendes som None hvis tomme
         product_id = str(data.get("product_id", "")).strip() or None
         car_id = str(data.get("car_id", "")).strip() or None
+        location_id = str(data.get("location_id", "")).strip() or None
         subscription_name = str(data.get("subscription_name", "")).strip()
         subscription_price = str(data.get("subscription_price", "")).strip()
         subscription_status = str(data.get("subscription_status", "")).strip()
@@ -81,14 +82,14 @@ def create_subscription():
         cursor.execute(
             """
             INSERT INTO subscriptions (
-                subscription_id, product_id, car_id, subscriptions_name,
+                subscription_id, product_id, car_id, location_id, subscriptions_name,
                 subscriptions_price, subscriptions_status, subscriptions_start_date,
                 subscriptions_end_date, subscriptions_next_billing_date
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
-                subscription_id, product_id, car_id, subscription_name,
+                subscription_id, product_id, car_id, location_id, subscription_name,
                 subscription_price, subscription_status, subscription_start_date,
                 subscription_end_date, subscription_next_billing_date,
             ),
