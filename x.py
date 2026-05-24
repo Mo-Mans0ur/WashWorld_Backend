@@ -122,70 +122,12 @@ CAR_NUMBER_PLATE_REGEX = r"^[A-Z]{2}[0-9]{6}$"
 
 def validate_car_number_plate():
     # Checks if the car number plate matches the expected format.
-    car_number_plate = request.form.get("car_number_plate", "").strip().upper()
+    car_number_plate = str(car_number_plate or "").strip().upper().replace(" ", "")
+
     if not re.match(CAR_NUMBER_PLATE_REGEX, car_number_plate):
         raise Exception("company_exception car_number_plate")
+    
     return car_number_plate
-
-##############################
-CAR_MODEL_MIN = 2
-CAR_MODEL_MAX = 20
-CAR_MODEL_REGEX = f"^.{{{CAR_MODEL_MIN},{CAR_MODEL_MAX}}}$"
-
-def validate_car_model():
-    # Checks if the car model is the right length.
-    car_model = request.form.get("car_model", "").strip()
-    if not re.match(CAR_MODEL_REGEX, car_model):
-        raise Exception("company_exception car_model")
-    return car_model
-
-##############################
-CAR_BRAND_MIN = 2
-CAR_BRAND_MAX = 20
-CAR_BRAND_REGEX = f"^.{{{CAR_BRAND_MIN},{CAR_BRAND_MAX}}}$"
-
-def validate_car_brand():
-    # Checks if the car brand is the right length.
-    car_brand = request.form.get("car_brand", "").strip()
-    if not re.match(CAR_BRAND_REGEX, car_brand):
-        raise Exception("company_exception car_brand")
-    return car_brand
-###############################
-CAR_YEAR_MIN = 1900
-CAR_YEAR_MAX = 2026
-def validate_car_year():
-    # Checks if the car year is a valid year.
-    try:
-        car_year = int(request.form.get("car_year", "").strip())
-    except ValueError:
-        raise Exception("company_exception car_year")
-    if car_year < CAR_YEAR_MIN or car_year > CAR_YEAR_MAX:
-        raise Exception("company_exception car_year")
-    return car_year
-
-##############################
-CAR_COLOR_MAX = 20
-REGEX_CAR_COLOR = rf"^[A-Za-zÆØÅæøå -]{{1,{CAR_COLOR_MAX}}}$"
-
-def validate_car_color():
-    # Checks if the car color only contains allowed characters.
-    car_color = request.form.get("car_color", "").strip()
-    if not re.match(REGEX_CAR_COLOR, car_color):
-        raise Exception("company_exception car_color")
-    return car_color
-
-###############################
-SEARCH_QUERY_MIN = 2
-SEARCH_QUERY_MAX = 50
-REGEX_SEARCH_QUERY = rf"^[A-Za-zÆØÅæøå -]{{{SEARCH_QUERY_MIN},{SEARCH_QUERY_MAX}}}$"
-
-def validate_search_query():
-    # Checks if the search text is valid.
-    search_query = request.args.get("search", "").strip()
-    if not re.match(REGEX_SEARCH_QUERY, search_query):
-        raise Exception("company_exception search_query")
-    return search_query
-
 
 
 ###############################
