@@ -118,15 +118,16 @@ def validate_user_password():
     return user_password
 
 ###############################
-CAR_NUMBER_PLATE_REGEX = r"^[A-Z]{2}[0-9]{6}$"
+CAR_NUMBER_PLATE_REGEX = r"^[A-Z0-9][A-Z0-9 \-]{0,10}[A-Z0-9]$"
 
-def validate_car_number_plate():
+def validate_car_number_plate(plate):
     # Checks if the car number plate matches the expected format.
-    car_number_plate = str(car_number_plate or "").strip().upper().replace(" ", "")
-
+    # Returns None for empty/invalid plates so callers can return a 400 response.
+    car_number_plate = str(plate or "").strip().upper()
+    if not car_number_plate:
+        return None
     if not re.match(CAR_NUMBER_PLATE_REGEX, car_number_plate):
-        raise Exception("company_exception car_number_plate")
-    
+        return None
     return car_number_plate
 
 

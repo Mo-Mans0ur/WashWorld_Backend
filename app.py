@@ -18,6 +18,14 @@ def handle_options():
     if request.method == "OPTIONS":
         from routes.api_common import apply_cors
         return apply_cors(jsonify({}))
+
+
+@app.after_request
+def apply_cors_globally(response):
+    from routes.api_common import apply_cors
+    return apply_cors(response)
+
+
 app.config["SECRET_KEY"] = os.environ.get(
     "SECRET_KEY",
     "washworld-dev-secret-change-me",
