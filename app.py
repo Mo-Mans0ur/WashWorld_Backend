@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, render_template
 
 from routes.auth_api import bp as auth_api_bp
 from routes.locations_api import bp as locations_api_bp
@@ -11,21 +11,6 @@ from routes.wash_log_api import bp as wash_log_api_bp
 from routes.offers_api import bp as offers_api_bp
 
 app = Flask(__name__)
-
-
-@app.before_request
-def handle_options():
-    if request.method == "OPTIONS":
-        from routes.api_common import apply_cors
-        return apply_cors(jsonify({}))
-
-
-@app.after_request
-def apply_cors_globally(response):
-    from routes.api_common import apply_cors
-    return apply_cors(response)
-
-
 app.config["SECRET_KEY"] = os.environ.get(
     "SECRET_KEY",
     "washworld-dev-secret-change-me",
