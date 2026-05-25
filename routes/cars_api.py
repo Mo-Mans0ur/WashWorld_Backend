@@ -1,3 +1,7 @@
+# Vehicle (car) management for a specific user.
+# Prefix: /api/users  (routes are /api/users/<user_id>/cars)
+# All routes require a valid Bearer token matching the user_id in the URL.
+
 import uuid
 
 from flask import Blueprint, jsonify
@@ -9,6 +13,8 @@ from x import db
 bp = Blueprint("cars_api", __name__, url_prefix="/api/users")
 
 VALID_VEHICLE_TYPES = {"car", "motorcycle", "truck", "bus"}
+
+# Reusable SELECT fragment shared by get_user_cars and any future queries.
 CAR_SELECT = """
     SELECT car_id, user_id, car_license_plate, car_name, car_is_ev,
            car_country_code, car_vehicle_type, car_is_active
@@ -17,6 +23,9 @@ CAR_SELECT = """
 
 
 def _authorize(user_id: str):
+    """Verifies the Bearer token and checks that it belongs to user_id.
+    Returns (user_id, None) on success or (None, error_response) on failure.
+    Used by every route in this module."""
     token_user_id = _bearer_user_id()
     if not token_user_id:
         return None, error_response("Ikke autoriseret", 401)
@@ -26,12 +35,19 @@ def _authorize(user_id: str):
 
 
 def _parse_bool(value) -> bool:
+    """Converts various truthy representations to a Python bool.
+    Handles JSON booleans directly and string values like '1', 'true', 'yes'.
+    Used to normalize the car_is_ev field from request bodies."""
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in ("1", "true", "yes")
 
 
 def _parse_car_fields(data: dict):
+    """Validates and normalizes all fields from a car create or update request.
+    Returns ((plate, name, is_ev, country_code, vehicle_type), None) on success,
+    or (None, error_response) if any field is invalid.
+    Used in create_car and update_car."""
     plate = str(data.get("car_license_plate", "")).strip()
     if not plate:
         return None, error_response("Mangler nummerplade", 400)
@@ -57,11 +73,14 @@ def _parse_car_fields(data: dict):
 
 @bp.after_request
 def _cors(response):
+    # Adds CORS headers to all car responses.
     return apply_cors(response)
 
 
 @bp.get("/<user_id>/cars")
 def get_user_cars(user_id):
+    """GET /api/users/<user_id>/cars
+    Returns all active cars for the user, sorted by license plate."""
     _, err = _authorize(user_id)
     if err:
         return err
@@ -90,6 +109,9 @@ def get_user_cars(user_id):
 
 @bp.post("/<user_id>/cars")
 def create_car(user_id):
+    """POST /api/users/<user_id>/cars
+    Creates a new car for the user after validating all fields.
+    Returns 409 if the license plate already exists in the database."""
     _, err = _authorize(user_id)
     if err:
         return err
@@ -131,6 +153,7 @@ def create_car(user_id):
     except Exception as e:
         if conn:
             conn.rollback()
+        # errno 1062 is MySQL's duplicate entry error (unique constraint on license plate).
         if hasattr(e, "errno") and e.errno == 1062:
             return error_response("Nummerpladen findes allerede", 409)
         return error_response("Kunne ikke oprette køretøj", 503)
@@ -143,6 +166,9 @@ def create_car(user_id):
 
 @bp.put("/<user_id>/cars/<car_id>")
 def update_car(user_id, car_id):
+    """PUT /api/users/<user_id>/cars/<car_id>
+    Updates all fields of an existing car. Verifies ownership before updating.
+    Returns 409 if the new license plate is already used by another car."""
     _, err = _authorize(user_id)
     if err:
         return err
@@ -155,6 +181,7 @@ def update_car(user_id, car_id):
     conn, cursor = None, None
     try:
         conn, cursor = db()
+        # Verify the car belongs to this user before updating.
         cursor.execute(
             "SELECT car_id FROM cars WHERE car_id = %s AND user_id = %s LIMIT 1",
             (car_id, user_id),
@@ -191,6 +218,9 @@ def update_car(user_id, car_id):
 
 @bp.delete("/<user_id>/cars/<car_id>")
 def delete_car(user_id, car_id):
+    """DELETE /api/users/<user_id>/cars/<car_id>
+    Soft-deletes a car by setting car_is_active = 0. The row stays in the database
+    so wash log history linked to the car is preserved."""
     _, err = _authorize(user_id)
     if err:
         return err

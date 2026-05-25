@@ -1,3 +1,7 @@
+# Authentication endpoints: login, register, email verification, and password reset.
+# Prefix: /api/auth
+# Uses JWT tokens (auth_tokens.py) and email utilities (x.py).
+
 import re
 import uuid
 from datetime import datetime, timedelta
@@ -19,20 +23,21 @@ from x import (
 
 PASSWORD_MIN = 8
 PASSWORD_MAX = 50
-VERIFICATION_LINK_TTL_MINUTES = 10 # min
+# Verification links expire after 10 minutes to limit the window for account takeover.
+VERIFICATION_LINK_TTL_MINUTES = 10
 
 bp = Blueprint("auth_api", __name__, url_prefix="/api/auth")
 
 
 @bp.after_request
 def _cors(response):
-    # Adds CORS headers to auth responses.
+    # Adds CORS headers to all auth responses.
     return apply_cors(response)
 
 
-
 def _public_user(row):
-    # Builds the user object that is safe to send back to the frontend.
+    """Returns only the safe fields from a user row — strips password hash and verification keys.
+    Used in login (auth_api) and get_user (users_api) before sending user data to the client."""
     return {
         "user_id": row["user_id"],
         "user_email": row["user_email"],
@@ -47,7 +52,7 @@ def _public_user(row):
 
 
 def _validate_email(email: str) -> Optional[str]:
-    # Checks if the email is valid.
+    """Returns the cleaned email if it matches the regex, otherwise None."""
     email = email.strip()
     if not re.match(REGEX_USER_EMAIL, email):
         return None
@@ -55,7 +60,7 @@ def _validate_email(email: str) -> Optional[str]:
 
 
 def _validate_password(password: str) -> Optional[str]:
-    # Checks if the password length is valid.
+    """Returns the password if it is 8–50 characters, otherwise None."""
     password = password.strip()
     if len(password) < PASSWORD_MIN or len(password) > PASSWORD_MAX:
         return None
@@ -63,7 +68,8 @@ def _validate_password(password: str) -> Optional[str]:
 
 
 def _fetch_user_by_email(cursor, email: str):
-    # Finds one user by email.
+    """Looks up a single user row by email address.
+    Used in login, register (duplicate check), and forgot_password."""
     cursor.execute(
         """
         SELECT
@@ -88,7 +94,8 @@ def _fetch_user_by_email(cursor, email: str):
 
 
 def _fetch_user_by_verification_key(cursor, verification_key: str):
-    # Finds one user by their email verification key.
+    """Looks up a single user row by their one-time email verification key.
+    Used in verify_email."""
     cursor.execute(
         """
         SELECT
@@ -114,7 +121,9 @@ def _fetch_user_by_verification_key(cursor, verification_key: str):
 
 @bp.post("/login")
 def login():
-    # Logs in a verified user and returns an access token.
+    """POST /api/auth/login
+    Validates email and password, checks that the account is verified, and returns a JWT token.
+    Returns 401 for bad credentials, 403 if the email has not been verified."""
     data = json_body()
     email = _validate_email(data.get("user_email", ""))
     password = _validate_password(data.get("user_password", ""))
@@ -162,7 +171,9 @@ def login():
 
 @bp.post("/register")
 def register():
-    # Creates a new user and sends a verification email.
+    """POST /api/auth/register
+    Creates a new user with a hashed password and sends a verification email.
+    Returns 409 if the email is already registered."""
     data = json_body()
     email = _validate_email(data.get("user_email", ""))
     password = _validate_password(data.get("user_password", ""))
@@ -216,7 +227,6 @@ def register():
         )
         conn.commit()
 
-
         try:
             send_verification_email(email, firstname, verification_key)
         except Exception as email_error:
@@ -252,7 +262,9 @@ def register():
 
 @bp.get("/verify/<verification_key>")
 def verify_email(verification_key):
-    # Verifies a user account from the email link.
+    """GET /api/auth/verify/<verification_key>
+    Marks the user account as verified and rotates the verification key (so the link can only be used once).
+    Redirects the browser to the frontend with a status query parameter."""
     conn, cursor = None, None
 
     try:
@@ -271,14 +283,15 @@ def verify_email(verification_key):
         if user.get("user_deleted_at"):
             return redirect("http://localhost:3000/email-verified?status=deleted")
 
+        # Link expires VERIFICATION_LINK_TTL_MINUTES after account creation.
         if datetime.utcnow() >= user["user_created_at"] + timedelta(minutes=VERIFICATION_LINK_TTL_MINUTES):
             return redirect("http://localhost:3000/email-verified?status=expired")
 
         if user.get("user_verified_at"):
             return redirect("http://localhost:3000/email-verified?status=already-verified")
 
-        
         now = datetime.utcnow()
+        # Rotate the key after use so the same link cannot verify the account again.
         new_verification_key = uuid.uuid4().hex
 
         cursor.execute(
@@ -320,7 +333,9 @@ def verify_email(verification_key):
 
 @bp.post("/forgot-password")
 def forgot_password():
-    # Generates a reset key and sends a password-reset email if the account exists.
+    """POST /api/auth/forgot-password
+    Generates a time-bounded reset key (15 min TTL) and sends it to the user's email.
+    Always returns 200 regardless of whether the email exists — prevents email enumeration."""
     data = json_body()
     email = _validate_email(data.get("user_email", ""))
 
@@ -366,7 +381,9 @@ def forgot_password():
 
 @bp.post("/reset-password")
 def reset_password():
-    # Validates the reset key and updates the user's password.
+    """POST /api/auth/reset-password
+    Validates the time-bounded reset key, hashes the new password, and clears the reset key
+    so the link cannot be reused. Returns 400 if the key is expired or already used."""
     data = json_body()
     reset_key = str(data.get("reset_key") or "").strip()
     password = _validate_password(data.get("user_password", ""))
@@ -396,6 +413,7 @@ def reset_password():
         password_hash = generate_password_hash(password, method="pbkdf2:sha256")
         now = datetime.utcnow()
 
+        # Set user_reset_password to NULL so the link cannot be reused.
         cursor.execute(
             """
             UPDATE users

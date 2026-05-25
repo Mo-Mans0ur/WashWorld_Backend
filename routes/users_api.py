@@ -1,3 +1,7 @@
+# User profile and favorites management.
+# Prefix: /api/users
+# All routes require a valid Bearer token that matches the user_id in the URL.
+
 import uuid
 from datetime import datetime
 
@@ -14,10 +18,14 @@ bp = Blueprint("users_api", __name__, url_prefix="/api/users")
 
 @bp.after_request
 def _cors(response):
+    # Adds CORS headers to all user responses.
     return apply_cors(response)
 
 
 def _bearer_user_id():
+    """Extracts the JWT from the Authorization header and returns the user_id.
+    Returns None if the header is missing, malformed, or the token is invalid/expired.
+    Called by every protected route in users_api and cars_api."""
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return None
@@ -26,6 +34,8 @@ def _bearer_user_id():
 
 
 def _fetch_user_by_id(cursor, user_id: str):
+    """Fetches a non-deleted user row by user_id.
+    Used in get_user and after update_user to return the updated profile."""
     cursor.execute(
         """
         SELECT user_id, user_email, user_firstname, user_lastname, user_phone,
@@ -41,6 +51,8 @@ def _fetch_user_by_id(cursor, user_id: str):
 
 @bp.get("/<user_id>")
 def get_user(user_id):
+    """GET /api/users/<user_id>
+    Returns the user profile. Requires a Bearer token that matches user_id."""
     token_user_id = _bearer_user_id()
     if not token_user_id:
         return error_response("Ikke autoriseret", 401)
@@ -69,6 +81,9 @@ def get_user(user_id):
 
 @bp.put("/<user_id>")
 def update_user(user_id):
+    """PUT /api/users/<user_id>
+    Updates the user's name, email, phone, and optionally password.
+    Requires a Bearer token that matches user_id."""
     token_user_id = _bearer_user_id()
     if not token_user_id:
         return error_response("Ikke autoriseret", 401)
@@ -134,6 +149,9 @@ def update_user(user_id):
 
 @bp.delete("/<user_id>")
 def delete_user(user_id):
+    """DELETE /api/users/<user_id>
+    Soft-deletes the user by setting user_deleted_at. The row stays in the database.
+    Requires a Bearer token that matches user_id."""
     token_user_id = _bearer_user_id()
     if not token_user_id:
         return error_response("Ikke autoriseret", 401)
@@ -164,6 +182,9 @@ def delete_user(user_id):
 
 @bp.get("/<user_id>/subscriptions")
 def get_user_subscriptions(user_id):
+    """GET /api/users/<user_id>/subscriptions
+    Returns all subscriptions linked to the user's cars, including car name and license plate.
+    Requires a Bearer token that matches user_id."""
     token_user_id = _bearer_user_id()
     if not token_user_id:
         return error_response("Ikke autoriseret", 401)
@@ -199,6 +220,9 @@ def get_user_subscriptions(user_id):
 
 @bp.get("/<user_id>/favorites")
 def get_favorites(user_id):
+    """GET /api/users/<user_id>/favorites
+    Returns a list of location IDs the user has saved as favorites.
+    Requires a Bearer token that matches user_id."""
     token_user_id = _bearer_user_id()
     if not token_user_id:
         return error_response("Ikke autoriseret", 401)
@@ -225,6 +249,9 @@ def get_favorites(user_id):
 
 @bp.post("/<user_id>/favorites")
 def add_favorite(user_id):
+    """POST /api/users/<user_id>/favorites
+    Adds a location to the user's favorites. Returns 200 silently if already added.
+    Requires a Bearer token that matches user_id. Body: { location_id }"""
     token_user_id = _bearer_user_id()
     if not token_user_id:
         return error_response("Ikke autoriseret", 401)
@@ -265,6 +292,9 @@ def add_favorite(user_id):
 
 @bp.delete("/<user_id>/favorites/<location_id>")
 def remove_favorite(user_id, location_id):
+    """DELETE /api/users/<user_id>/favorites/<location_id>
+    Removes a location from the user's favorites.
+    Requires a Bearer token that matches user_id."""
     token_user_id = _bearer_user_id()
     if not token_user_id:
         return error_response("Ikke autoriseret", 401)
