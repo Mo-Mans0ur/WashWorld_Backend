@@ -35,6 +35,7 @@ services:
       - mariadb
     environment:
       PMA_HOST: mariadb
+      PMA_ARBITRARY: 1
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
       - 8080:80
