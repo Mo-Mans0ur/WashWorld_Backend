@@ -1058,10 +1058,6 @@ ALTER TABLE `locations`
   ADD PRIMARY KEY (`location_id`);
 
 --
--- Indexes for table `location_equipment`
--- (PRIMARY KEY and location_id index are defined in CREATE TABLE)
-
---
 -- Indexes for table `offers`
 --
 ALTER TABLE `offers`
