@@ -1,3 +1,6 @@
+# Subscription (service plan) management — no authentication required on these endpoints.
+# Prefix: /api
+
 import uuid
 
 from icecream import ic
@@ -12,17 +15,14 @@ bp = Blueprint("subscriptions_api", __name__, url_prefix="/api")
 
 @bp.after_request
 def _cors(response):
+    # Adds CORS headers to all subscription responses.
     return apply_cors(response)
-
-
-@bp.route("/subscriptions", methods=["OPTIONS"])
-@bp.route("/subscriptions/<subscription_id>", methods=["OPTIONS"])
-def subscriptions_options(subscription_id=None):
-    return apply_cors(jsonify({}))
 
 
 @bp.get("/subscriptions")
 def get_subscriptions():
+    """GET /api/subscriptions
+    Returns all subscriptions in the database regardless of status."""
     conn, cursor = None, None
 
     try:
@@ -30,7 +30,7 @@ def get_subscriptions():
 
         cursor.execute(
             """
-            SELECT subscription_id, product_id, car_id, subscriptions_name,
+            SELECT subscription_id, product_id, car_id, location_id, subscriptions_name,
                    subscriptions_price, subscriptions_status, subscriptions_start_date,
                    subscriptions_end_date, subscriptions_next_billing_date
             FROM subscriptions
@@ -55,12 +55,17 @@ def get_subscriptions():
 
 @bp.post("/subscriptions")
 def create_subscription():
+    """POST /api/subscriptions
+    Creates a new subscription. product_id and car_id are optional (nullable in the DB).
+    Required fields: subscription_name, subscription_price, subscription_status,
+    subscription_start_date, subscription_end_date, subscription_next_billing_date."""
     conn, cursor = None, None
     try:
         data = json_body()
-        # product_id og car_id er nullable i DB — sendes som None hvis tomme
+        # product_id and car_id are nullable in the DB — sent as None if empty.
         product_id = str(data.get("product_id", "")).strip() or None
         car_id = str(data.get("car_id", "")).strip() or None
+        location_id = str(data.get("location_id", "")).strip() or None
         subscription_name = str(data.get("subscription_name", "")).strip()
         subscription_price = str(data.get("subscription_price", "")).strip()
         subscription_status = str(data.get("subscription_status", "")).strip()
@@ -86,14 +91,14 @@ def create_subscription():
         cursor.execute(
             """
             INSERT INTO subscriptions (
-                subscription_id, product_id, car_id, subscriptions_name,
+                subscription_id, product_id, car_id, location_id, subscriptions_name,
                 subscriptions_price, subscriptions_status, subscriptions_start_date,
                 subscriptions_end_date, subscriptions_next_billing_date
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
-                subscription_id, product_id, car_id, subscription_name,
+                subscription_id, product_id, car_id, location_id, subscription_name,
                 subscription_price, subscription_status, subscription_start_date,
                 subscription_end_date, subscription_next_billing_date,
             ),
@@ -114,6 +119,8 @@ def create_subscription():
 
 @bp.delete("/subscriptions/<subscription_id>")
 def delete_subscription(subscription_id):
+    """DELETE /api/subscriptions/<subscription_id>
+    Permanently removes a subscription from the database."""
     conn, cursor = None, None
     try:
         subscription_id = (subscription_id or "").strip()
@@ -144,6 +151,9 @@ def delete_subscription(subscription_id):
 
 @bp.put("/subscriptions/<subscription_id>")
 def update_subscription(subscription_id):
+    """PUT /api/subscriptions/<subscription_id>
+    Updates the status, end date, and next billing date of a subscription.
+    All three fields are required."""
     conn, cursor = None, None
     try:
         subscription_id = (subscription_id or "").strip()

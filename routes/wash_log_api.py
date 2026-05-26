@@ -1,3 +1,6 @@
+# Wash history (wash log) — records and retrieves car wash sessions.
+# Prefix: /api
+
 from datetime import datetime
 import uuid
 
@@ -13,11 +16,17 @@ bp = Blueprint("wash_log_api", __name__, url_prefix="/api")
 
 @bp.after_request
 def _cors(response):
+    # Adds CORS headers to all wash log responses.
     return apply_cors(response)
 
 
 @bp.get("/wash_log")
 def get_wash_log():
+    """GET /api/wash_log?user_id=<user_id>
+    Returns the full wash history for all cars owned by the user.
+    Joins cars, products, and locations so each entry includes car plate,
+    product name and price, and the location name and address.
+    Uses COALESCE so a per-wash override price takes precedence over the product price."""
     conn, cursor = None, None
 
     try:
@@ -39,6 +48,7 @@ def get_wash_log():
 
                 products.product_id,
                 products.product_name,
+                COALESCE(wash_log.wash_log_price, products.product_price) AS product_price,
 
                 locations.location_id,
                 locations.location_name,
@@ -81,6 +91,10 @@ def get_wash_log():
 
 @bp.post("/wash_log")
 def create_wash_log():
+    """POST /api/wash_log
+    Records a new wash session. car_id is required.
+    product_id, location_id, and wash_log_price are optional —
+    if wash_log_price is omitted, the product's default price is used when the log is read."""
     conn, cursor = None, None
 
     try:
@@ -89,6 +103,9 @@ def create_wash_log():
         car_id = str(data.get("car_id", "")).strip()
         product_id = str(data.get("product_id", "")).strip()
         location_id = str(data.get("location_id", "")).strip()
+        wash_log_price_raw = data.get("wash_log_price")
+        # Store None if no price override is provided; the GET endpoint falls back to product price.
+        wash_log_price = float(wash_log_price_raw) if wash_log_price_raw is not None else None
 
         if not car_id:
             return jsonify({"error": "Missing car id"}), 400
@@ -105,9 +122,10 @@ def create_wash_log():
                 car_id,
                 product_id,
                 location_id,
-                wash_log_start_time
+                wash_log_start_time,
+                wash_log_price
             )
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
             (
                 wash_log_id,
@@ -115,6 +133,7 @@ def create_wash_log():
                 product_id if product_id else None,
                 location_id if location_id else None,
                 wash_log_start_time,
+                wash_log_price,
             ),
         )
 
