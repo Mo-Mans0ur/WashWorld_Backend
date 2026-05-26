@@ -29,7 +29,8 @@ def db():
             port=int(os.environ.get("MYSQL_PORT", 3306)),
             user=os.environ["MYSQL_USER"],
             password=os.environ["MYSQL_PASSWORD"],
-            database=os.environ["MYSQL_DATABASE"]
+            database=os.environ["MYSQL_DATABASE"],
+            charset="utf8mb4",
         )
         cursor = connection.cursor(dictionary=True)
         return connection, cursor
