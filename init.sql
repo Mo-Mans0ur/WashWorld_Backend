@@ -881,18 +881,6 @@ INSERT INTO `location_equipment` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `location_services`
---
-
-CREATE TABLE `location_services` (
-  `location_service_id` char(32) NOT NULL,
-  `location_id` char(32) DEFAULT NULL,
-  `location_service_status` varchar(50) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `offers`
 --
 
@@ -1072,13 +1060,6 @@ ALTER TABLE `locations`
 --
 -- Indexes for table `location_equipment`
 -- (PRIMARY KEY and location_id index are defined in CREATE TABLE)
-
---
--- Indexes for table `location_services`
---
-ALTER TABLE `location_services`
-  ADD PRIMARY KEY (`location_service_id`),
-  ADD KEY `location_id` (`location_id`);
 
 --
 -- Indexes for table `offers`
