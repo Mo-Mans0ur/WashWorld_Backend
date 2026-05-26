@@ -1,7 +1,9 @@
 -- Run this to fix Danish characters (æøå) in the locations table.
 -- Import via phpMyAdmin with charset set to utf8mb4.
 SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS=0;
 DELETE FROM `locations`;
+SET FOREIGN_KEY_CHECKS=1;
 INSERT INTO `locations` (`location_id`, `location_name`, `location_address`, `location_zipcode`, `location_coordinate_x`, `location_coordinate_y`, `location_open_hours`) VALUES
 ('1059', 'Aabenraa', 'Egevej 4', '6200', 9.364450, 55.065643, '7-22'),
 ('1033', 'Aalborg SV', 'Otto Mønsteds Vej 5', '9200', 9.896256, 57.015248, '7-22'),
