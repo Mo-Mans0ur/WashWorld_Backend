@@ -27,7 +27,7 @@ def list_offers():
         cursor.execute(
             """
             SELECT offer_id, product_id, offer_description, offer_discount_percentage,
-                   offer_start_date, offer_end_date, offer_photo_base64
+                   offer_start_date, offer_end_date, offer_photo_url
             FROM offers
             WHERE CURDATE() >= DATE(offer_start_date)
               AND CURDATE() <= DATE(offer_end_date)
