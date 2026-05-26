@@ -36,7 +36,8 @@ def list_offers():
         )
         rows = cursor.fetchall()
         return jsonify({"offers": [row_to_json(r) for r in rows]})
-    except Exception:
+    except Exception as e:
+        print(f"Offers error: {e}", flush=True)
         return jsonify({"error": "Kunne ikke hente tilbud"}), 503
     finally:
         if cursor:
