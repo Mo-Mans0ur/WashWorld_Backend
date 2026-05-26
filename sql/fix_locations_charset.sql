@@ -1,5 +1,5 @@
 -- Run this to fix Danish characters (æøå) in the locations table.
--- Import via phpMyAdmin with charset set to utf8mb4.
+-- Import via phpMyAdmin with charset set to utf8mb4 for the railway server.
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS=0;
 DELETE FROM `locations`;
