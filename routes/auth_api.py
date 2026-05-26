@@ -2,6 +2,7 @@
 # Prefix: /api/auth
 # Uses JWT tokens (auth_tokens.py) and email utilities (x.py).
 
+import os
 import re
 import uuid
 from datetime import datetime, timedelta
@@ -277,18 +278,20 @@ def verify_email(verification_key):
 
         user = _fetch_user_by_verification_key(cursor, verification_key)
 
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
         if not user:
-            return redirect("http://localhost:3000/email-verified?status=invalid")
+            return redirect(f"{frontend_url}/email-verified?status=invalid")
 
         if user.get("user_deleted_at"):
-            return redirect("http://localhost:3000/email-verified?status=deleted")
+            return redirect(f"{frontend_url}/email-verified?status=deleted")
 
         # Link expires VERIFICATION_LINK_TTL_MINUTES after account creation.
         if datetime.utcnow() >= user["user_created_at"] + timedelta(minutes=VERIFICATION_LINK_TTL_MINUTES):
-            return redirect("http://localhost:3000/email-verified?status=expired")
+            return redirect(f"{frontend_url}/email-verified?status=expired")
 
         if user.get("user_verified_at"):
-            return redirect("http://localhost:3000/email-verified?status=already-verified")
+            return redirect(f"{frontend_url}/email-verified?status=already-verified")
 
         now = datetime.utcnow()
         # Rotate the key after use so the same link cannot verify the account again.
@@ -313,7 +316,7 @@ def verify_email(verification_key):
 
         conn.commit()
 
-        return redirect("http://localhost:3000/email-verified?status=success")
+        return redirect(f"{frontend_url}/email-verified?status=success")
 
     except Exception as e:
         print(e, flush=True)

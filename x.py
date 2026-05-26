@@ -27,7 +27,8 @@ def db():
     Called at the start of every route handler."""
     try:
         connection = mysql.connector.connect(
-            host="mariadb",
+            host=os.environ.get("MYSQL_HOST", "mariadb"),
+            port=int(os.environ.get("MYSQL_PORT", 3306)),
             user=os.environ["MYSQL_USER"],
             password=os.environ["MYSQL_PASSWORD"],
             database=os.environ["MYSQL_DATABASE"]
@@ -161,7 +162,8 @@ def send_verification_email(receiver_email, firstname, verification_key):
         sender_email = "washworldtest2026@gmail.com"
         password = "cfbx erul ezpe ksuj"  # Gmail App Password (2FA required on sender account)
 
-        verification_link = f"http://127.0.0.1:80/api/auth/verify/{verification_key}"
+        backend_url = os.environ.get("BACKEND_URL", "http://127.0.0.1:80")
+        verification_link = f"{backend_url}/api/auth/verify/{verification_key}"
 
         receiver_email = receiver_email
 
@@ -275,7 +277,8 @@ def send_reset_password_email(receiver_email, firstname, reset_key):
         sender_email = "washworldtest2026@gmail.com"
         password = "cfbx erul ezpe ksuj"
 
-        reset_link = f"http://localhost:3000/reset-password/confirm?key={reset_key}"
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+        reset_link = f"{frontend_url}/reset-password/confirm?key={reset_key}"
 
         message = MIMEMultipart()
         message["From"] = "Washworld <washworldtest2026@gmail.com>"
