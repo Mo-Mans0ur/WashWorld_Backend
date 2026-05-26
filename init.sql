@@ -891,7 +891,7 @@ CREATE TABLE `offers` (
   `offer_discount_percentage` decimal(5,2) NOT NULL,
   `offer_start_date` datetime NOT NULL,
   `offer_end_date` datetime NOT NULL,
-  `offer_photo_base64` longtext DEFAULT NULL
+  `offer_photo_url` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- --------------------------------------------------------
@@ -1116,12 +1116,6 @@ ALTER TABLE `cars`
 -- Constraints for table `location_equipment`
 --
 ALTER TABLE `location_equipment`
-  ADD CONSTRAINT `1` FOREIGN KEY (`location_id`) REFERENCES `locations` (`location_id`);
-
---
--- Constraints for table `location_services`
---
-ALTER TABLE `location_services`
   ADD CONSTRAINT `1` FOREIGN KEY (`location_id`) REFERENCES `locations` (`location_id`);
 
 --

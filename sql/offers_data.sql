@@ -8,7 +8,7 @@ INSERT INTO `offers` (
   `offer_discount_percentage`,
   `offer_start_date`,
   `offer_end_date`,
-  `offer_photo_base64`
+  `offer_photo_url`
 ) VALUES
 (
   'o1a2b3c4d5e6478990aabbccddeeff01',
@@ -17,7 +17,7 @@ INSERT INTO `offers` (
   0.00,
   '2024-01-01 00:00:00',
   '2030-12-31 23:59:59',
-  NULL
+  '/images/offers/offer1.png'
 ),
 (
   'o2a3b4c5d6e6478990aabbccddeeff02',
@@ -26,7 +26,7 @@ INSERT INTO `offers` (
   0.00,
   '2024-01-01 00:00:00',
   '2030-12-31 23:59:59',
-  NULL
+  '/images/offers/offer2.png'
 ),
 (
   'o3a4b5c6d7e6478990aabbccddeeff03',
@@ -35,7 +35,7 @@ INSERT INTO `offers` (
   0.00,
   '2024-01-01 00:00:00',
   '2030-12-31 23:59:59',
-  NULL
+  '/images/offers/offer3.png'
 ),
 (
   'o4a5b6c7d8e6478990aabbccddeeff04',
@@ -44,5 +44,5 @@ INSERT INTO `offers` (
   50.00,
   '2024-01-01 00:00:00',
   '2030-12-31 23:59:59',
-  NULL
+  '/images/offers/offer4.png'
 );
