@@ -22,7 +22,9 @@ def list_offers():
     between offer_start_date and offer_end_date.
     Each offer includes a description, discount percentage, and a base64-encoded photo."""
     conn, cursor = None, None
+    print("Offers route hit", flush=True)
     try:
+        print("Offers: connecting to DB", flush=True)
         conn, cursor = db()
         cursor.execute(
             """
