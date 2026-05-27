@@ -4,8 +4,10 @@
 from time import time
 
 from flask import request, make_response, Blueprint
-import resend
+import smtplib
 import mysql.connector
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import uuid
 import re
 from functools import wraps
@@ -157,9 +159,15 @@ def send_verification_email(receiver_email, firstname, verification_key):
     The link points to /api/auth/verify/<verification_key> and expires after 10 minutes.
     Called in auth_api.register after a new user is created."""
     try:
-        resend.api_key = os.environ["RESEND_API_KEY"]
+        sender_email = "washworldtest2026@gmail.com"
+        password = "cfbx erul ezpe ksuj"
         backend_url = os.environ.get("BACKEND_URL", "http://127.0.0.1:80")
         verification_link = f"{backend_url}/api/auth/verify/{verification_key}"
+
+        message = MIMEMultipart()
+        message["From"] = "WashWorld <washworldtest2026@gmail.com>"
+        message["To"] = receiver_email
+        message["Subject"] = "Please verify your account"
 
         body = f"""<div style="font-family: Gilroy, Arial, sans-serif; line-height: 1.5; color: #333; padding: 20px; background-color: #f9f9f9; border-radius: 10px; max-width: 600px; margin: auto;">
                 <h1>Welcome to WashWorld</h1>
@@ -185,13 +193,12 @@ def send_verification_email(receiver_email, firstname, verification_key):
                     <p>If the button above does not work, please copy and paste the following link into your browser:</p>
                     <p><a href="{verification_link}">{verification_link}</a></p>
                    </div>"""
+        message.attach(MIMEText(body, "html"))
 
-        resend.Emails.send({
-            "from": "WashWorld <onboarding@resend.dev>",
-            "to": receiver_email,
-            "subject": "Please verify your account",
-            "html": body,
-        })
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, message.as_string())
         print("Verification email sent successfully!", flush=True)
         return "email sent"
 
@@ -260,9 +267,15 @@ def send_reset_password_email(receiver_email, firstname, reset_key):
     The link expires in 15 minutes (enforced by is_reset_password_key_expired).
     Called in auth_api.forgot_password after the reset key is stored in the DB."""
     try:
-        resend.api_key = os.environ["RESEND_API_KEY"]
+        sender_email = "washworldtest2026@gmail.com"
+        password = "cfbx erul ezpe ksuj"
         frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
         reset_link = f"{frontend_url}/reset-password/confirm?key={reset_key}"
+
+        message = MIMEMultipart()
+        message["From"] = "WashWorld <washworldtest2026@gmail.com>"
+        message["To"] = receiver_email
+        message["Subject"] = "Nulstil din adgangskode"
 
         body = f"""<div style="font-family: Gilroy, Arial, sans-serif; line-height: 1.5; color: #333; padding: 20px; background-color: #f9f9f9; border-radius: 10px; max-width: 600px; margin: auto;">
                 <h1>WashWorld</h1>
@@ -290,15 +303,13 @@ def send_reset_password_email(receiver_email, firstname, reset_key):
 
                 <p>Hvis du ikke har anmodet om at nulstille din adgangskode, kan du se bort fra denne email.</p>
                </div>"""
+        message.attach(MIMEText(body, "html"))
 
-        resend.Emails.send({
-            "from": "WashWorld <onboarding@resend.dev>",
-            "to": receiver_email,
-            "subject": "Nulstil din adgangskode",
-            "html": body,
-        })
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, message.as_string())
         print("Reset password email sent successfully!", flush=True)
-
         return "email sent"
 
     except Exception as ex:
