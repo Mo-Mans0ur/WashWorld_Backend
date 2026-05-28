@@ -20,7 +20,7 @@ def list_offers():
     """GET /api/offers
     Returns currently active promotional offers — those where today's date falls
     between offer_start_date and offer_end_date.
-    Each offer includes a description, discount percentage, and a base64-encoded photo."""
+    Each offer includes a description, discount percentage, and an image URL/path."""
     conn, cursor = None, None
     try:
         conn, cursor = db()

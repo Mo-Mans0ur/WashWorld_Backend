@@ -1,5 +1,5 @@
--- Eksempel-tilbud til dashboard (kør efter init.sql / offers_migration.sql).
--- Billeder kan tilføjes som rå base64 eller data-URI i offer_photo_base64.
+-- Eksempel-tilbud til dashboard (kør efter init.sql).
+-- Denne seed bruger offer_photo_url (sti/URL til billedfil).
 
 INSERT INTO `offers` (
   `offer_id`,
