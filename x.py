@@ -269,7 +269,7 @@ def send_reset_password_email(receiver_email, firstname, reset_key):
     try:
         sender_email = "washworldtest2026@gmail.com"
         password = "cfbx erul ezpe ksuj"
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+        frontend_url = os.environ.get("FRONTEND_URL", "https://andreasbuch.dk")
         reset_link = f"{frontend_url}/reset-password/confirm?key={reset_key}"
 
         message = MIMEMultipart()
