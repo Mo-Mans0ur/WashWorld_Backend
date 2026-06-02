@@ -919,7 +919,7 @@ INSERT INTO `offers` (
 (
   'o2a3b4c5d6e6478990aabbccddeeff02',
   NULL,
-  'Tank oktan 100% Køreglæde',
+  'Vask 10 gange og få premium for 1 kr.',
   0.00,
   '2024-01-01 00:00:00',
   '2030-12-31 23:59:59',
@@ -928,7 +928,7 @@ INSERT INTO `offers` (
 (
   'o3a4b5c6d7e6478990aabbccddeeff03',
   NULL,
-  'Vask 10 gange og få premium for 1 kr.',
+  'Tank oktan 100% Køreglæde',
   0.00,
   '2024-01-01 00:00:00',
   '2030-12-31 23:59:59',
