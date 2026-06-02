@@ -46,6 +46,7 @@ pnpm-debug.log*
 *.pid.lock
 tmp/
 temp/
+docker-compose.yml
 
 # Editor
 .vscode/

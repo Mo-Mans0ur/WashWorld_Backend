@@ -30,6 +30,6 @@ app.register_blueprint(wash_log_api_bp)        # /api/wash_log
 app.register_blueprint(offers_api_bp)          # /api/offers
 
 
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('dashboard.html')
+    return jsonify({"status": "ok"})
