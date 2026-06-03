@@ -278,7 +278,7 @@ def verify_email(verification_key):
 
         user = _fetch_user_by_verification_key(cursor, verification_key)
 
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+        frontend_url = os.environ.get("FRONTEND_URL", "https://andreasbuch.dk")
 
         if not user:
             return redirect(f"{frontend_url}/email-verified?status=invalid")
