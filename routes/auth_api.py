@@ -2,7 +2,6 @@
 # Prefix: /api/auth
 # Uses JWT tokens (auth_tokens.py) and email utilities (x.py).
 
-import os
 import re
 import uuid
 from datetime import datetime, timedelta
@@ -16,6 +15,7 @@ from routes.auth_tokens import create_access_token
 from x import (
     REGEX_USER_EMAIL,
     db,
+    get_frontend_url,
     send_verification_email,
     make_reset_password_key,
     is_reset_password_key_expired,
@@ -278,7 +278,7 @@ def verify_email(verification_key):
 
         user = _fetch_user_by_verification_key(cursor, verification_key)
 
-        frontend_url = os.environ.get("FRONTEND_URL", "https://andreasbuch.dk")
+        frontend_url = get_frontend_url()
 
         if not user:
             return redirect(f"{frontend_url}/email-verified?status=invalid")

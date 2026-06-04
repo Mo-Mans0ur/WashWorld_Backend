@@ -20,6 +20,29 @@ import os
 import mysql.connector
 
 
+def get_frontend_url() -> str:
+    """Base URL for the Next.js app (reset links, verify redirects).
+    Set FRONTEND_URL in WashWorld_Backend/.env — same host/port you use in the browser."""
+    url = (os.environ.get("FRONTEND_URL") or "").strip().rstrip("/")
+    if not url:
+        raise Exception(
+            "FRONTEND_URL er ikke sat i .env (fx http://localhost:3000 eller http://192.168.10.132:3000)",
+            500,
+        )
+    return url
+
+
+def get_backend_url() -> str:
+    """Public base URL for this Flask API (verification links in email)."""
+    url = (os.environ.get("BACKEND_URL") or "").strip().rstrip("/")
+    if not url:
+        raise Exception(
+            "BACKEND_URL er ikke sat i .env (fx http://localhost eller http://192.168.10.132)",
+            500,
+        )
+    return url
+
+
 def db():
     """Opens a new database connection and returns (connection, cursor).
     The cursor uses dictionary=True so rows come back as dicts instead of tuples.
@@ -161,8 +184,7 @@ def send_verification_email(receiver_email, firstname, verification_key):
     try:
         sender_email = "washworldtest2026@gmail.com"
         password = "cfbx erul ezpe ksuj"
-        backend_url = os.environ.get("BACKEND_URL", "http://127.0.0.1:80")
-        verification_link = f"{backend_url}/api/auth/verify/{verification_key}"
+        verification_link = f"{get_backend_url()}/api/auth/verify/{verification_key}"
 
         message = MIMEMultipart()
         message["From"] = "WashWorld <washworldtest2026@gmail.com>"
@@ -269,8 +291,7 @@ def send_reset_password_email(receiver_email, firstname, reset_key):
     try:
         sender_email = "washworldtest2026@gmail.com"
         password = "cfbx erul ezpe ksuj"
-        frontend_url = os.environ.get("FRONTEND_URL", "https://andreasbuch.dk")
-        reset_link = f"{frontend_url}/reset-password/confirm?key={reset_key}"
+        reset_link = f"{get_frontend_url()}/reset-password/confirm?key={reset_key}"
 
         message = MIMEMultipart()
         message["From"] = "WashWorld <washworldtest2026@gmail.com>"
