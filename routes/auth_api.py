@@ -318,7 +318,7 @@ def forgot_password():
     Generates a time-bounded reset key (15 min TTL) and sends it to the user's email.
     Always returns 200 regardless of whether the email exists — prevents email enumeration."""
     data = json_body()
-    email = _validate_email(data.get("user_email", ""))
+    email = validate_email(data.get("user_email", ""))
 
     if not email:
         return error_response("Ugyldig email", 400)
@@ -367,7 +367,7 @@ def reset_password():
     so the link cannot be reused. Returns 400 if the key is expired or already used."""
     data = json_body()
     reset_key = str(data.get("reset_key") or "").strip()
-    password = _validate_password(data.get("user_password", ""))
+    password = validate_password(data.get("user_password", ""))
 
     if not reset_key or not password:
         return error_response("Ugyldig anmodning", 400)
