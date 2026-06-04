@@ -2,10 +2,8 @@
 # Prefix: /api/auth
 # Uses JWT tokens (auth_tokens.py) and email utilities (x.py).
 
-import re
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional
 
 from flask import Blueprint, jsonify, request, redirect
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -13,17 +11,19 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from routes.api_common import apply_cors, error_response, json_body, row_to_json
 from routes.auth_tokens import create_access_token
 from x import (
-    REGEX_USER_EMAIL,
     db,
     get_frontend_url,
     send_verification_email,
     make_reset_password_key,
     is_reset_password_key_expired,
     send_reset_password_email,
+    validate_email,
+    validate_password,
+    validate_firstname,
+    validate_lastname,
+    validate_phone,
 )
 
-PASSWORD_MIN = 8
-PASSWORD_MAX = 50
 # Verification links expire after 10 minutes to limit the window for account takeover.
 VERIFICATION_LINK_TTL_MINUTES = 10
 
@@ -50,22 +50,6 @@ def _public_user(row):
         "user_deleted_at": row_to_json(row).get("user_deleted_at"),
         "user_verified_at": row_to_json(row).get("user_verified_at"),
     }
-
-
-def _validate_email(email: str) -> Optional[str]:
-    """Returns the cleaned email if it matches the regex, otherwise None."""
-    email = email.strip()
-    if not re.match(REGEX_USER_EMAIL, email):
-        return None
-    return email
-
-
-def _validate_password(password: str) -> Optional[str]:
-    """Returns the password if it is 8–50 characters, otherwise None."""
-    password = password.strip()
-    if len(password) < PASSWORD_MIN or len(password) > PASSWORD_MAX:
-        return None
-    return password
 
 
 def _fetch_user_by_email(cursor, email: str):
@@ -126,11 +110,11 @@ def login():
     Validates email and password, checks that the account is verified, and returns a JWT token.
     Returns 401 for bad credentials, 403 if the email has not been verified."""
     data = json_body()
-    email = _validate_email(data.get("user_email", ""))
-    password = _validate_password(data.get("user_password", ""))
-
-    if not email or not password:
-        return error_response("Ugyldig email eller kodeord", 400)
+    try:
+        email = validate_email(data.get("user_email", ""))
+        password = validate_password(data.get("user_password", ""))
+    except ValueError as e:
+        return error_response(str(e), 400)
 
     conn, cursor = None, None
 
@@ -176,20 +160,14 @@ def register():
     Creates a new user with a hashed password and sends a verification email.
     Returns 409 if the email is already registered."""
     data = json_body()
-    email = _validate_email(data.get("user_email", ""))
-    password = _validate_password(data.get("user_password", ""))
-    firstname = (data.get("user_firstname") or "").strip()
-    lastname = (data.get("user_lastname") or "").strip()
-    phone = (data.get("user_phone") or "").strip()
-
-    if not email or not password:
-        return error_response("Ugyldig email eller kodeord", 400)
-    if len(firstname) < 2 or len(firstname) > 50:
-        return error_response("Fornavn skal være 2–50 tegn", 400)
-    if len(lastname) < 2 or len(lastname) > 50:
-        return error_response("Efternavn skal være 2–50 tegn", 400)
-    if len(phone) > 20:
-        return error_response("Telefonnummer er for langt", 400)
+    try:
+        email = validate_email(data.get("user_email", ""))
+        password = validate_password(data.get("user_password", ""))
+        firstname = validate_firstname(data.get("user_firstname", ""))
+        lastname = validate_lastname(data.get("user_lastname", ""))
+        phone = validate_phone(data.get("user_phone", ""))
+    except ValueError as e:
+        return error_response(str(e), 400)
 
     user_id = uuid.uuid4().hex
     verification_key = uuid.uuid4().hex

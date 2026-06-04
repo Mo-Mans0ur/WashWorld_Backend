@@ -11,7 +11,7 @@ from werkzeug.security import generate_password_hash
 from routes.api_common import apply_cors, error_response, json_body, row_to_json
 from routes.auth_api import _public_user
 from routes.auth_tokens import load_user_id_from_token
-from x import db
+from x import db, validate_email, validate_password, validate_firstname, validate_lastname, validate_phone
 
 bp = Blueprint("users_api", __name__, url_prefix="/api/users")
 
@@ -91,26 +91,24 @@ def update_user(user_id):
         return error_response("Ingen adgang", 403)
 
     data = json_body()
-    firstname = (data.get("user_firstname") or "").strip()
-    lastname = (data.get("user_lastname") or "").strip()
-    email = (data.get("user_email") or "").strip()
-    phone = (data.get("user_phone") or "").strip()
+    try:
+        firstname = validate_firstname(data.get("user_firstname", ""))
+        lastname = validate_lastname(data.get("user_lastname", ""))
+        email = validate_email(data.get("user_email", ""))
+        phone = validate_phone(data.get("user_phone", ""))
+    except ValueError as e:
+        return error_response(str(e), 400)
     new_password = (data.get("user_password") or "").strip()
-
-    if len(firstname) < 2 or len(firstname) > 50:
-        return error_response("Fornavn skal være 2–50 tegn", 400)
-    if len(lastname) < 2 or len(lastname) > 50:
-        return error_response("Efternavn skal være 2–50 tegn", 400)
-    if not email or "@" not in email:
-        return error_response("Ugyldig email", 400)
 
     conn, cursor = None, None
     try:
         conn, cursor = db()
 
         if new_password:
-            if len(new_password) < 6:
-                return error_response("Kodeord skal være mindst 6 tegn", 400)
+            try:
+                new_password = validate_password(new_password)
+            except ValueError as e:
+                return error_response(str(e), 400)
             password_hash = generate_password_hash(new_password, method="pbkdf2:sha256")
             cursor.execute(
                 """
