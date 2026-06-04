@@ -3,7 +3,7 @@
 
 import os
 
-from flask import Flask, render_template
+from flask import Flask, jsonify
 
 from routes.auth_api import bp as auth_api_bp
 from routes.locations_api import bp as locations_api_bp
